@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drop Game</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Bruno+Ace&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+
+</head>
+<body>
+<div id="loadingOverlay">
+  <video
+    id="introVideo"
+    autoplay
+    muted
+    playsinline
+    style="width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;"
+  >
+    <source src="items/BollyGamesIntroFixed.mp4" type="video/mp4" />
+  </video>
+  <div class="loading-bar-container">
+    <div id="loadingBarFill" class="loading-bar-fill"></div>
+  </div>
+</div>
+<div id="introImage" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: url('items/new intro image.jpeg') no-repeat center center / cover; z-index: 10000;">
+  <div class="tap-to-play">tap to play</div>
+</div>
+
+<main>
+  <div id="viewport">
+
+    <div id="starfield"></div>
+
+    <div id="game-scale">
+      <div id="game">
+        <div id="world">
+          <div id="ground"></div>
+          <div id="sky">
+          <div class="cloud-layer back"></div>
+          <div class="cloud-layer mid"></div>
+          <div class="cloud-layer front"></div>
+        </div>
+
+        <div id="player">
+          <div id="head"></div>
+          <div id="torso"></div>
+          <div id="left-arm"></div>
+          <div id="right-arm"></div>
+          <div id="left-leg"></div>
+          <div id="right-leg"></div>
+        </div>
+
+        <div id="sprite"></div>
+        <div id="skeleton"></div>
+        </div>
+        <canvas id="debugColliders"></canvas>
+
+        <div class="bet-ui" aria-label="Bet controls">
+          <div class="bet-ui-left">
+            <button class="bet-ui-icon" id="menuBtn" type="button" aria-label="Menu">☰</button>
+
+            <div class="balance-pill" aria-label="Balance">
+              <span class="balance-label">Balance</span>
+              <span class="balance-value" id="balance">₹1000.00</span>
+            </div>
+          </div>
+
+          <div class="bet-ui-center">
+            <div class="bet-pill" aria-label="Bet amount">
+              <button id="minus" type="button" class="bet-step">−</button>
+
+              <div class="bet-display">
+                <span class="bet-label">Bet</span>
+                <input id="betAmount" class="bet-input" type="number" min="1" max="999999">
+              </div>
+
+              <button id="plus" type="button" class="bet-step">+</button>
+            </div>
+          </div>
+
+          <div class="bet-ui-right">
+            <button id="bonusToggle" type="button" class="bonus-chip">Bonus</button>
+            <button class="bet-ui-icon" id="soundBtn" type="button" aria-label="Sound">🔊</button>
+            <button id="placeBet" type="button" class="bet-main-button">Bet</button>
+          </div>
+        </div>
+
+        <div id="score">₹0</div>
+        <div id="multiplier">×1</div>
+        <div id="flipText"></div>
+
+        <div id="runOver"></div>
+
+        <!-- Bonus Modal -->
+        <div id="bonusModal">
+          <div class="modal-content">
+            <button id="noZeroPayoutBtn">No-Zero Mode</button>
+            <button id="chaosModeBtn">Bonus Mode</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>

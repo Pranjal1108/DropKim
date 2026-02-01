@@ -1,0 +1,1077 @@
+* { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: black;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+/* Intro image prompt */
+.tap-to-play {
+  position: absolute;
+  left: 50%;
+  bottom: 50px;
+  transform: translateX(-50%);
+
+  font-family: "Luckiest Guy", cursive;
+  font-size: 42px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.95);
+
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.45),
+    0 12px 30px rgba(0, 0, 0, 0.65);
+
+  animation: tapToPlayPulse 1s ease-in-out infinite;
+  user-select: none;
+  pointer-events: none;
+}
+
+@keyframes tapToPlayPulse {
+  0% { opacity: 0.55; transform: translateX(-50%) scale(0.98); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.04); }
+  100% { opacity: 0.55; transform: translateX(-50%) scale(0.98); }
+}
+
+#loadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 20000;
+  transition: opacity 0.5s ease-in-out;
+  background: #ffe802;
+}
+.loading-bar-container {
+  width: 80%;
+  max-width: 600px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  position: absolute;
+  bottom: 50px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.loading-bar-fill {
+  height: 100%;
+  width: 0%; /* Controlled by JS now */
+  background: #ffd700;
+  border-radius: 3px;
+  transition: width 0.1s linear; /* Smooth visual updates */
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+}
+/* Responsive fixes */
+@media (max-width: 1024px) {
+  #introVideo { object-fit: contain !important; }
+}
+
+#viewport {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(#0d1b2a, #030712);
+}
+
+#game-scale {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--game-scale, 1));
+  width: 1920px;
+  height: 1200px;
+  z-index: 5;
+}
+
+#game {
+  width: 8200px;
+  height: 1151px;
+  position: relative;
+  overflow: visible;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#world {
+  position: absolute;
+  width: 100%;
+  height: 20000px;
+  z-index: 6;
+}
+
+/******** CLOUDS ********/
+.cloud {
+  position: absolute;
+  filter: drop-shadow(0px 10px 25px rgba(0,0,0,0.18)) brightness(.9) contrast(1.1);
+  opacity: 90%;
+}
+
+/******** DARK CLOUD ********/
+.dark-cloud {
+  position: absolute;
+  background: url("clouds/darkcloud.png") no-repeat center/contain;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.black-hole {
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+}
+
+
+
+/******** PLAYER ********/
+#player{
+  position:absolute;
+  left:50%;
+  top:50%;
+  z-index: 9998;
+  transform:translate(-50%,-50%);
+  width:270px;
+  height:450px;
+  pointer-events:none;
+}
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: black;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+#viewport {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(#0d1b2a, #030712);
+}
+
+#game-scale {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--game-scale, 1));
+  width: 1920px;
+  height: 1200px;
+  z-index: 5;
+}
+
+#game {
+  width: 1920px;
+  height: 1151px;
+  position: relative;
+  overflow: visible;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#world {
+  position: absolute;
+  width: 100%;
+  height: 20000px;
+  z-index: 6;
+}
+
+/******** CLOUDS ********/
+.cloud {
+  position: absolute;
+  filter: drop-shadow(0px 10px 25px rgba(0,0,0,0.18)) brightness(.9) contrast(1.1);
+  opacity: 90%;
+}
+
+/******** DARK CLOUD ********/
+.dark-cloud {
+  position: absolute;
+  background: url("clouds/darkcloud.png") no-repeat center/contain;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.black-hole {
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+}
+
+
+
+/******** PLAYER ********/
+#player{
+  position:absolute;
+  left:50%;
+  top:50%;
+  z-index: 9998;
+  transform:translate(-50%,-50%);
+  width:270px;
+  height:450px;
+  pointer-events:none;
+}
+
+#sprite {
+  position: absolute;
+  width: 300px;
+  height: 400px;
+  pointer-events: none;
+  z-index: 9998;
+  background: url("items/game sprite green.png") no-repeat center/contain;
+}
+
+
+
+#skeleton {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 270px;
+  height: 450px;
+  background: url("items/skeleton.png") no-repeat center/contain;
+  pointer-events: none;
+  display: none;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+}
+
+#debugColliders{
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index: 100000;
+}
+
+.debug-rect{
+  position:absolute;
+  border:2px solid rgba(0,255,0,.6);
+  box-sizing:border-box;
+}
+
+.debug-circle{
+  position:absolute;
+  border:2px solid rgba(255,0,0,.7);
+  border-radius:50%;
+  box-sizing:border-box;
+}
+
+
+#score {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 105px + 25px);
+  transform: translateX(-50%);
+  z-index: 999;
+
+  font-family: "Inter","Poppins","Montserrat","Segoe UI",sans-serif;
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: .6px;
+
+  color: #ffffff;
+
+  -webkit-text-stroke: 0;
+
+  text-shadow:
+    0 0 8px rgba(255, 152, 152, 0.15),
+    0 0 18px rgba(246, 206, 106, 0.18),   /* light golden halo */
+    0 0 35px rgba(156, 132, 72, 0.15),   /* extended soft glow */
+    0 6px 24px rgba(53, 34, 34, 0.55);       /* grounding shadow */
+
+  pointer-events: none;
+}
+
+
+#multiplier {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 100px);
+  transform: translateX(-50%);
+  font-size: 28px;
+  font-weight: 400;
+  font-family: "Bruno Ace", sans-serif;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.7);
+  z-index: 999999;
+  pointer-events: none;
+  display: none;
+}
+
+#multiplier.showcase {
+  font-size: 48px;
+  font-weight: 400;
+  font-family: "Bruno Ace", sans-serif;
+  color: #ffffff;
+  text-shadow:
+    0 0 30px rgba(255,255,255,1),
+    0 0 60px rgba(255,215,0,1);
+  animation: showcasePulse 0.5s ease-in-out infinite alternate;
+}
+
+#score.showcase {
+  font-size: 60px;
+  font-weight: 400;
+  font-family: "Bruno Ace", sans-serif;
+  color: #ffffff;
+  text-shadow:
+    0 0 30px rgba(255,255,255,1),
+    0 0 60px rgba(255,215,0,1);
+  animation: showcasePulse 0.5s ease-in-out infinite alternate;
+}
+
+
+@keyframes showcasePulse {
+  0% { transform: translateX(-50%) scale(1); }
+  100% { transform: translateX(-50%) scale(1.2); }
+}
+
+#flipText {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 200px);
+  transform: translateX(-50%);
+  font-family: "Luckiest Guy", cursive;
+  font-size: 36px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(255,255,255,0.8);
+  z-index: 999999;
+  pointer-events: none;
+  display: none;
+  animation: flash 0.5s ease-in-out;
+}
+
+@keyframes flash {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#sky{
+  /* Screen-space layer within the game coordinate system */
+  width: 1920px;
+  height: 1200px;
+  position: relative;
+  overflow: visible;
+}
+
+/* ===============================
+   CLOUD LAYERS (UI / SCREEN SPACE)
+   =============================== */
+
+.cloud-layer {
+  position: absolute;
+  inset: -300px;        
+  pointer-events: none;
+  overflow: visible;    
+}
+
+/* Back Layer (smallest & slowest) */
+.back div {
+  position: absolute;
+  width: 120px;
+  height: 70px;
+  background: url("items/movcloud1.png") no-repeat center / contain;
+  opacity: 0.6;
+}
+
+/* Mid Layer */
+.mid div {
+  position: absolute;
+  width: 180px;
+  height: 100px;
+  background: url("items/movcloud2.png") no-repeat center / contain;
+  opacity: 0.8;
+}
+
+/* Front Layer (big boi) */
+.front div {
+  position: absolute;
+  width: 250px;
+  height: 140px;
+  background: url("items/movcloud3.png") no-repeat center / contain;
+}
+
+
+
+/******** SILVERJET ********/
+.silverjet {
+  position: absolute;
+  width: 440px;
+  height: 320px;
+  background: url("items/plane.png") no-repeat center/contain;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%) scale(4);
+}
+
+#ground {
+  position: absolute;
+  width: 200000px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  background: url("items/ground.png?v=1") repeat-x;
+  background-size: 8210px 205px;
+  background-position: 0 100%;
+
+  pointer-events: none;
+  z-index: 999;
+}
+
+
+.tank {
+  position: absolute;
+  bottom: 0;
+  width: 500px;
+  height: 375px;
+
+  background-image: url("items/tank.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+
+  pointer-events: none;
+  z-index: 9999999;
+}
+
+.military-camp {
+  position: absolute;
+  width: 800px;
+  height: 600px;
+
+  background-image: url("items/Military_camp.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+
+  pointer-events: none;
+  z-index: 9999999;
+}
+
+
+
+/******** STARFIELD ********/
+#starfield {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: rgb(255, 255, 255);
+  width: 2px;
+  height: 2px;
+  box-shadow: 0 0 6px 2px rgba(255,255,255,.4);
+  animation-name: twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-duration: 2s;
+} 
+
+@keyframes twinkle {
+  0%   { opacity: .1; transform: scale(.8); }
+  50%  { opacity: 1;  transform: scale(1.4); }
+  100% { opacity: .1; transform: scale(.8); }
+}
+
+/******** BET PANEL ********/
+.bet-ui {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1420px;
+  max-width: calc(100% - 40px);
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  background: linear-gradient(#3a3a3a, #262626);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+  font-family: "Bruno Ace", "Segoe UI", sans-serif;
+  z-index: 999999;
+  pointer-events: auto;
+}
+
+.bet-ui-left,
+.bet-ui-center,
+.bet-ui-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bet-ui-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #161616;
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.bet-ui-icon:active {
+  transform: scale(0.96);
+}
+
+.balance-pill {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.balance-label {
+  opacity: 0.85;
+  font-size: 14px;
+}
+
+.balance-value {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bet-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 30px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.bet-step {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #0f0f0f;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.bet-step:active {
+  transform: scale(0.94);
+}
+
+.bet-display {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: #ffffff;
+  padding: 0 8px;
+}
+
+.bet-label {
+  opacity: 0.85;
+  font-size: 14px;
+}
+
+.bet-input {
+  width: 120px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.bet-input::-webkit-outer-spin-button,
+.bet-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.bet-input[type=number] {
+  appearance: textfield;
+}
+
+.bonus-chip {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 176, 0, 0.55);
+  background: linear-gradient(#ffb800, #ff8a00);
+  color: rgba(18, 18, 18, 0.95);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.bonus-chip:active {
+  transform: scale(0.98);
+}
+
+.bonus-chip.no-zero {
+  border-color: rgba(255, 232, 2, 0.9);
+  background: rgba(255, 232, 2, 0.98);
+}
+
+.bonus-chip.chaos {
+  border-color: rgba(255, 62, 165, 0.85);
+  background: rgba(255, 62, 165, 0.95);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.bet-main-button {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: radial-gradient(circle at 30% 30%, #3b3b3b, #101010);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.07);
+}
+
+.bet-main-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bet-main-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/****** RUN OVER ********/
+#runOver {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+  background: rgba(0,0,0,0.7);
+  padding: 20px 40px;
+  border-radius: 20px;
+  display: none;
+  z-index: 9999;
+}
+
+/***** COLLECTIBLES ******/
+.collectible {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+}
+
+.chain { background-image: url("items/nuke.png"); width: 200px; height: 200px; }
+.music { background-image: url("items/notes.png"); }
+
+.mars { background-image: url("items/mars.png"); }
+.planet1 { background-image: url("items/planet1.png"); }
+.planet2 { background-image: url("items/planet2.png"); }
+.earthlike { background-image: url("items/earthlike.png"); }
+
+.void-sprite {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+}
+
+/******** PUSHABLES ********/
+.pushable {
+  position: absolute;
+  background: url('items/pushable.png') no-repeat center/contain;
+  pointer-events: none;
+}
+#sprite {
+  position: absolute;
+  width: 300px;
+  height: 400px;
+  pointer-events: none;
+  z-index: 9998;
+  background: url("items/game sprite green.png") no-repeat center/contain;
+}
+
+
+
+#skeleton {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 270px;
+  height: 450px;
+  background: url("items/skeleton.png") no-repeat center/contain;
+  pointer-events: none;
+  display: none;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+}
+
+#debugColliders{
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index: 100000;
+}
+
+.debug-rect{
+  position:absolute;
+  border:2px solid rgba(0,255,0,.6);
+  box-sizing:border-box;
+}
+
+.debug-circle{
+  position:absolute;
+  border:2px solid rgba(255,0,0,.7);
+  border-radius:50%;
+  box-sizing:border-box;
+}
+
+
+#score {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 105px + 25px);
+  transform: translateX(-50%);
+  z-index: 1;
+
+  font-family: "Inter","Poppins","Montserrat","Segoe UI",sans-serif;
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: .6px;
+
+  color: #ffffff;
+
+  -webkit-text-stroke: 0;
+
+  text-shadow:
+    0 0 8px rgba(255, 152, 152, 0.15),
+    0 0 18px rgba(246, 206, 106, 0.18),   /* light golden halo */
+    0 0 35px rgba(156, 132, 72, 0.15),   /* extended soft glow */
+    0 6px 24px rgba(53, 34, 34, 0.55);       /* grounding shadow */
+
+  pointer-events: none;
+}
+
+
+#multiplier {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 100px);
+  transform: translateX(-50%);
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.7);
+  z-index: 999999;
+  pointer-events: none;
+  display: none;
+}
+
+#sky{
+  width:100vw;
+  height:100vh;
+  position:relative;
+  overflow:visible;
+}
+
+/* ===============================
+   CLOUD LAYERS (UI / SCREEN SPACE)
+   =============================== */
+
+.cloud-layer {
+  position: absolute;
+  inset: -300px;        
+  pointer-events: none;
+  overflow: visible;    
+}
+
+/* Back Layer (smallest & slowest) */
+.back div {
+  position: absolute;
+  width: 120px;
+  height: 70px;
+  background: url("items/movcloud1.png") no-repeat center / contain;
+  opacity: 0.6;
+}
+
+/* Mid Layer */
+.mid div {
+  position: absolute;
+  width: 180px;
+  height: 100px;
+  background: url("items/movcloud2.png") no-repeat center / contain;
+  opacity: 0.8;
+}
+
+/* Front Layer (big boi) */
+.front div {
+  position: absolute;
+  width: 250px;
+  height: 140px;
+  background: url("items/movcloud3.png") no-repeat center / contain;
+}
+
+
+
+/******** SILVERJET ********/
+.silverjet {
+  position: absolute;
+  width: 440px;
+  height: 320px;
+  background: url("items/plane.png") no-repeat center/contain;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%) scale(4);
+}
+
+#ground {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+
+  background: url("items/ground.png") repeat-x;
+  background-repeat: repeat-x;
+  background-size: auto 140%;
+
+  pointer-events: none;
+  z-index: 999;
+}
+
+
+.tank {
+  position: absolute;
+  width: 500px;
+  height: 375px;
+
+  background-image: url("items/tank.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+
+  pointer-events: none;
+  z-index: 9999999;
+}
+
+.military-camp {
+  position: absolute;
+  width: 800px;
+  height: 600px;
+
+  background-image: url("items/Military_camp.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+
+  pointer-events: none;
+  z-index: 9999999;
+}
+
+
+
+/******** STARFIELD ********/
+#starfield {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: rgb(255, 255, 255);
+  width: 2px;
+  height: 2px;
+  box-shadow: 0 0 6px 2px rgba(255,255,255,.4);
+  animation-name: twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-duration: 2s;
+}
+
+@keyframes twinkle {
+  0%   { opacity: .1; transform: scale(.8); }
+  50%  { opacity: 1;  transform: scale(1.4); }
+  100% { opacity: .1; transform: scale(.8); }
+}
+
+
+
+/****** RUN OVER ********/
+#runOver {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+  background: rgba(0,0,0,0.7);
+  padding: 20px 40px;
+  border-radius: 20px;
+  display: none;
+  z-index: 9999;
+}
+
+/***** COLLECTIBLES ******/
+.collectible {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+}
+
+.chain { background-image: url("items/nuke.png"); width: 200px; height: 200px; }
+.music { background-image: url("items/notes.png"); }
+
+
+.void-sprite {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+}
+
+/******** PUSHABLES ********/
+.pushable {
+  position: absolute;
+  background: url('items/pushable.png') no-repeat center/contain;
+  pointer-events: none;
+}
+
+/******** BONUS MODAL ********/
+#bonusModal {
+  /* Keep the modal inside the scaled game window (so it scales with #game-scale). */
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000000;
+}
+
+.modal-content {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  align-items: center;
+}
+
+#noZeroPayoutBtn,
+#chaosModeBtn {
+  width: 200px;
+  height: 200px;
+
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 14px;
+
+  font-family: Poppins, sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  line-height: 1.1;
+
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+
+  background: #111;
+
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 12px 18px;
+}
+
+#noZeroPayoutBtn {
+  border-color: rgba(255, 232, 2, 0.9);
+  background: rgba(255, 232, 2, 0.98);
+  color: rgba(10, 10, 10, 0.92);
+}
+
+#chaosModeBtn {
+  border-color: rgba(255, 62, 165, 0.85);
+  background: rgba(255, 62, 165, 0.95);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+#noZeroPayoutBtn:hover,
+#chaosModeBtn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.6);
+}
+
+#noZeroPayoutBtn:active,
+#chaosModeBtn:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+#noZeroPayoutBtn:focus-visible,
+#chaosModeBtn:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
+}
