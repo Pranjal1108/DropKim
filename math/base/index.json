@@ -1,0 +1,9 @@
+{
+    "mode": "base",
+    "rtp": 0.96,
+    "total_weight": 10000,
+    "files": {
+        "lookup": "./lookup_table.json",
+        "csv": "./table.csv"
+    }
+}

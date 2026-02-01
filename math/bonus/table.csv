@@ -1,0 +1,6 @@
+name,multiplier,probability,range_start,range_end
+insane,100,0.0005,0,5
+big,20,0.01,5,105
+medium,6,0.05,105,605
+small,2,0.205,605,2655
+lose,0,0.7345,2655,10000

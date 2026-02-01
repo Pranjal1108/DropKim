@@ -1,0 +1,37 @@
+[
+    {
+        "name": "insane",
+        "multiplier": 100,
+        "probability": 0.0005,
+        "range_start": 0,
+        "range_end": 5
+    },
+    {
+        "name": "big",
+        "multiplier": 20,
+        "probability": 0.01,
+        "range_start": 5,
+        "range_end": 105
+    },
+    {
+        "name": "medium",
+        "multiplier": 6,
+        "probability": 0.05,
+        "range_start": 105,
+        "range_end": 605
+    },
+    {
+        "name": "small",
+        "multiplier": 2,
+        "probability": 0.205,
+        "range_start": 605,
+        "range_end": 2655
+    },
+    {
+        "name": "lose",
+        "multiplier": 0,
+        "probability": 0.7345,
+        "range_start": 2655,
+        "range_end": 10000
+    }
+]

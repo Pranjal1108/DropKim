@@ -5,6 +5,9 @@ const app = express();
 app.use(express.json());
 app.use(express.static("public"));
 
+// Handle favicon requests to prevent 404 errors
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 app.post("/bet", (req, res) => {
   const betAmount = Number(req.body.betAmount);
 

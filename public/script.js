@@ -11,12 +11,12 @@ let planeSoundPlaying = false;
 
 // Explosion system for zero payout
 const BODY_PARTS = [
-    { name: 'head', image: 'items/Head.png', offsetX: 0, offsetY: -100, size: 80 },
-    { name: 'torso', image: 'items/torso.png', offsetX: 0, offsetY: 0, size: 120 },
-    { name: 'left_arm', image: 'items/left_arm.png', offsetX: -60, offsetY: -20, size: 60 },
-    { name: 'right_arm', image: 'items/right_arm.png', offsetX: 60, offsetY: -20, size: 60 },
-    { name: 'left_leg', image: 'items/left_leg.png', offsetX: -30, offsetY: 80, size: 80 },
-    { name: 'right_leg', image: 'items/right_leg.png', offsetX: 30, offsetY: 80, size: 80 }
+  { name: 'head', image: 'items/Head.png', offsetX: 0, offsetY: -100, size: 80 },
+  { name: 'torso', image: 'items/torso.png', offsetX: 0, offsetY: 0, size: 120 },
+  { name: 'left_arm', image: 'items/left_arm.png', offsetX: -60, offsetY: -20, size: 60 },
+  { name: 'right_arm', image: 'items/right_arm.png', offsetX: 60, offsetY: -20, size: 60 },
+  { name: 'left_leg', image: 'items/left_leg.png', offsetX: -30, offsetY: 80, size: 80 },
+  { name: 'right_leg', image: 'items/right_leg.png', offsetX: 30, offsetY: 80, size: 80 }
 ];
 
 let explosionParts = [];
@@ -46,6 +46,7 @@ function fadeBackgroundMusic(targetVolume, duration = 2000) {
 }
 
 function playSound(soundPath, volume = 1) {
+  if (soundMuted) return null;
   const audio = new Audio(soundPath);
   audio.volume = volume;
   audio.play().catch(e => console.warn('Sound play failed:', e));
@@ -58,7 +59,7 @@ const introVideo = document.getElementById("introVideo");
 const introImage = document.getElementById("introImage");
 
 // Real Asset Preloading + Min 4s Duration
-(function() {
+(function () {
   const minTime = 4000; // Minimum visual time (4 seconds)
   const startTime = performance.now();
   let loadedCount = 0;
@@ -99,13 +100,13 @@ const introImage = document.getElementById("introImage");
     // If assets ARE done, use the Time Progress (which allows it to reach 100% when time is up).
     // If both Time & Assets are done, we finish.
     if (loadedCount === totalAssets) {
-        // Assets are ready: Allow bar to fill up to 100% based on time
-        // If elapsed > minTime, this goes > 100% (handled by finishLoading)
-        const completionTimeProgress = Math.min(100, (elapsed / minTime) * 100);
-        updateProgressBar(completionTimeProgress);
+      // Assets are ready: Allow bar to fill up to 100% based on time
+      // If elapsed > minTime, this goes > 100% (handled by finishLoading)
+      const completionTimeProgress = Math.min(100, (elapsed / minTime) * 100);
+      updateProgressBar(completionTimeProgress);
     } else {
-        // Assets still loading: Show progress but stall at 90%
-        updateProgressBar(timeProgress);
+      // Assets still loading: Show progress but stall at 90%
+      updateProgressBar(timeProgress);
     }
     // Completion Check: Time is up AND Assets are loaded
     if (elapsed >= minTime && loadedCount === totalAssets) {
@@ -191,7 +192,7 @@ const WORLDH = 20000;
 world.style.height = WORLDH + "px";
 
 const GROUND_HEIGHT = 700;
-const GROUND_Y = WORLDH - GROUND_HEIGHT ;
+const GROUND_Y = WORLDH - GROUND_HEIGHT;
 const DEADZONE = 1500;
 
 ground.style.height = (GROUND_HEIGHT * 1.3) + "px";
@@ -229,9 +230,9 @@ const AIR_FRICTION = 0.95;
 const GROUND_FRICTION = 0.2;
 
 // Spawn counts by mode
-const TANK_COUNT_NORMAL = 10;
+const TANK_COUNT_NORMAL = 20;
 const TANK_COUNT_BONUS = 20;
-const CAMP_COUNT_NORMAL = 10;
+const CAMP_COUNT_NORMAL = 20;
 const CAMP_COUNT_BONUS = 20;
 
 const VISIBILITY_BUFFER = 2200; // distance between 2
@@ -304,7 +305,7 @@ const flipTextEl = document.getElementById("flipText");
 
 function showScore() {
   scoreEl.style.display = "block";
-  scoreEl.textContent = `₹${earnings.toFixed(2)}`;
+  scoreEl.textContent = `$${earnings.toFixed(2)}`;
 }
 
 function showMultiplier(m) {
@@ -352,7 +353,7 @@ function updateBalanceUI() {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  balanceEl.textContent = `₹${formatted}`;
+  balanceEl.textContent = `$${formatted}`;
   betInput.value = betAmount.toFixed(2);
   betBtn.disabled = getEffectiveBet() > balance || betAmount <= 0 || fallStarted;
 }
@@ -399,10 +400,32 @@ document.querySelectorAll(".chip").forEach(c => {
   };
 });
 
-betBtn.onclick = () => {
+const soundBtn = document.getElementById("soundBtn");
+let soundMuted = false;
+soundBtn.onclick = () => {
+  soundMuted = !soundMuted;
+  backgroundMusic.volume = soundMuted ? 0 : 0.3;
+  soundBtn.textContent = soundMuted ? "🔇" : "🔊";
+};
+
+let autoBetActive = false;
+const autoBetBtn = document.getElementById("autoBetBtn");
+autoBetBtn.onclick = () => {
+  autoBetActive = !autoBetActive;
+  autoBetBtn.classList.toggle("active", autoBetActive);
+};
+
+function placeBetAction() {
   if (fallStarted || betPlaced) return;
   const effectiveBet = bonusMode ? betAmount * 10 : betAmount;
-  if (effectiveBet > balance) return;
+  if (effectiveBet > balance) {
+    if (autoBetActive) {
+      autoBetActive = false;
+      autoBetBtn.classList.remove("active");
+      alert("Insufficient balance for Auto Bet");
+    }
+    return;
+  }
   balance -= effectiveBet;
   updateBalanceUI();
   camX = camY = velX = velY = angle = angVel = 0;
@@ -412,29 +435,40 @@ betBtn.onclick = () => {
   betPlaced = true;
   betResolved = false;
   lockBetUI();
-};
+}
+
+betBtn.onclick = placeBetAction;
+
+// Spacebar to bet
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !e.repeat) {
+    e.preventDefault(); // Prevent scrolling
+    placeBetAction();
+  }
+});
 
 function decideOutcome(bet) {
+  const math = bonusMode ? BonusMath : BaseMath;
   let r = Math.random();
-  if ((bonusMode || chaosMode || noZeroMode) && r < 0.96) r = 0.96;
+  let cumulative = 0;
 
-  if (r < 0.96) {
-    outcomeType = "lose";
-    targetPayout = multiplierBet * 0;
-    isZeroPayoutExplosion = true;
-  } else if (r < 0.97) {
-    outcomeType = "small";
-    targetPayout = multiplierBet * (1.2 + Math.random() * 0.6);
-  } else if (r < 0.995) {
-    outcomeType = "medium";
-    targetPayout = multiplierBet * (3 + Math.random() * 2);
-  } else if (r < 0.999) {
-    outcomeType = "big";
-    targetPayout = multiplierBet * (10 + Math.random() * 10);
-  } else {
-    outcomeType = "insane";
-    targetPayout = multiplierBet * (40 + Math.random() * 30);
+  for (const tier of math.tiers) {
+    cumulative += tier.probability;
+    if (r < cumulative) {
+      outcomeType = tier.name;
+      // Fixed multiplier to ensure exact RTP.
+      // You could add variance here (e.g. +/- 10%) if strictly mean-preserving,
+      // but fixed is most accurate for the requested requirement.
+      targetPayout = multiplierBet * tier.multiplier;
+      isZeroPayoutExplosion = (outcomeType === "lose");
+      return;
+    }
   }
+
+  // Fallback
+  outcomeType = "lose";
+  targetPayout = 0;
+  isZeroPayoutExplosion = true;
 }
 
 
@@ -451,6 +485,9 @@ bonusToggle.onclick = () => {
   if (fallStarted) return;
   const isOpen = window.getComputedStyle(bonusModal).display !== "none";
   setBonusModalOpen(!isOpen);
+  if (!isOpen) {
+    updateBonusButtons();
+  }
 };
 
 bonusModal.addEventListener("click", (e) => {
@@ -509,8 +546,26 @@ function setMode(nextMode) {
     bonusToggle.textContent = "Bonus";
   }
 
-  setBonusModalOpen(false);
+  updateBonusButtons();
   updateBalanceUI();
+}
+
+function updateBonusButtons() {
+  noZeroPayoutBtn.innerHTML = `
+    <div class="bonus-title">No Zero Payout</div>
+    <div class="bonus-image" style="background-image: url('items/No_0_background.png');"></div>
+    <div class="bonus-description">Guaranteed minimum payout</div>
+    <div class="bonus-amount">$50 bet</div>
+    <button class="bonus-toggle-btn ${noZeroMode ? 'active' : ''}">${noZeroMode ? 'Deactivate' : 'Activate'}</button>
+  `;
+
+  chaosModeBtn.innerHTML = `
+    <div class="bonus-title">Chaos Mode</div>
+    <div class="bonus-image" style="background-image: url('items/satellite_background.png');"></div>
+    <div class="bonus-description">Increased rewards and obstacles</div>
+    <div class="bonus-amount">$100 bet</div>
+    <button class="bonus-toggle-btn ${chaosMode ? 'active' : ''}">${chaosMode ? 'Deactivate' : 'Activate'}</button>
+  `;
 }
 
 const noZeroPayoutBtn = document.getElementById("noZeroPayoutBtn");
@@ -537,7 +592,7 @@ function hardResetWorld(showLoss = true, delay = 2000) {
   updateBalanceUI();
 
   if (showLoss) {
-    runOverEl.innerHTML = `RUN OVER<br>Total Winnings: ₹${payoutNum.toFixed(2)}`;
+    runOverEl.innerHTML = `RUN OVER<br>Total Winnings: $${payoutNum.toFixed(2)}`;
     runOverEl.style.display = "block";
   }
 
@@ -553,32 +608,14 @@ function hardResetWorld(showLoss = true, delay = 2000) {
     unlockBetUI();
     updateBalanceUI();
 
-    // Reset explosion variables
-    explosionTriggered = false;
-    explosionActive = false;
-    explosionParts = [];
-    isZeroPayoutExplosion = false;
-
-    // Reset modes
-    bonusMode = false;
-    noZeroMode = false;
-    chaosMode = false;
-    multiplierBet = 10;
-    betAmount = 10;
-
-    // Reset Bonus button UI + ensure the modal is closed
-    bonusToggle.className = "bonus-chip";
-    bonusToggle.textContent = "Bonus";
-    setBonusModalOpen(false);
-
-    // Sync UI with reset state
-    updateBalanceUI();
-
-    // Show sprite again
-    const sprite = document.getElementById("sprite");
-    const skeleton = document.getElementById("skeleton");
-    if (sprite) sprite.style.display = "block";
-    if (skeleton) skeleton.style.display = "none";
+    // Auto Bet Trigger
+    if (autoBetActive) {
+      setTimeout(() => {
+        if (autoBetActive && !fallStarted) {
+          placeBetAction();
+        }
+      }, 500);
+    }
   }, delay);
 }
 
@@ -599,7 +636,7 @@ const collectibles = [];
 const chains = [];
 const notes = [];
 const blackHoles = [];
-const blackholequantity = 35;
+const blackholequantity = 20;
 let tank = null;
 let camp = null;
 const pushables = [];
@@ -695,8 +732,8 @@ function spawnTanks(count = TANK_COUNT_NORMAL) {
   const groundY = parseInt(ground.style.top);
 
   // Even spacing so the player encounters them reliably.
-  const MIN_X = -SCREEN_W * 4;
-  const MAX_X = SCREEN_W * 4;
+  const MIN_X = -SCREEN_W * 20;
+  const MAX_X = SCREEN_W * 20;
   const step = count > 1 ? (MAX_X - MIN_X) / (count - 1) : 0;
 
   for (let i = 0; i < count; i++) {
@@ -708,7 +745,7 @@ function spawnTanks(count = TANK_COUNT_NORMAL) {
     el.style.display = "none";
 
     const x = MIN_X + step * i;
-    const y = groundY + 50;
+    const y = groundY + 150;
 
     el.style.left = x + "px";
     el.style.top = y + "px";
@@ -727,10 +764,10 @@ function spawnCamps(count = CAMP_COUNT_NORMAL) {
 
   const groundY = parseInt(ground.style.top);
 
-  // Even spacing, interleaved between tanks.
-  const MIN_X = -SCREEN_W * 4;
-  const MAX_X = SCREEN_W * 4;
-  const step = count > 0 ? (MAX_X - MIN_X) / count : 0;
+  // Even spacing, separate from tanks.
+  const MIN_X = SCREEN_W * 5;
+  const MAX_X = SCREEN_W * 10;
+  const step = count > 1 ? (MAX_X - MIN_X) / (count - 1) : 0;
 
   for (let i = 0; i < count; i++) {
     const el = document.createElement("div");
@@ -761,34 +798,26 @@ function updateGroundEntitiesVisibility() {
   camp = null;
 
   // ---- TANK ----
-  tanks.forEach(t => t.el.style.display = "none");
-
-  let t = tanks[activeTankIndex];
-  if (t) {
+  tanks.forEach(t => {
     const dy = Math.abs(t.y - camBottom);
     if (dy < VISIBILITY_BUFFER) {
       t.el.style.display = "block";
-      tank = t;
+      if (!tank) tank = t; // Set to first visible tank for collision
     } else {
-      tank = null;
-      activeTankIndex = (activeTankIndex + 1) % tanks.length;
+      t.el.style.display = "none";
     }
-  }
+  });
 
   // ---- CAMP ----
-  camps.forEach(c => c.el.style.display = "none");
-
-  let c = camps[activeCampIndex];
-  if (c) {
+  camps.forEach(c => {
     const dy = Math.abs(c.y - camBottom);
     if (dy < VISIBILITY_BUFFER) {
       c.el.style.display = "block";
-      camp = c;
+      if (!camp) camp = c; // Set to first visible camp for collision
     } else {
-      camp = null;
-      activeCampIndex = (activeCampIndex + 1) % camps.length;
+      c.el.style.display = "none";
     }
-  }
+  });
 }
 
 
@@ -1046,7 +1075,7 @@ function spawnWorld() {
   spawnTanks(chaosMode ? TANK_COUNT_BONUS : TANK_COUNT_NORMAL);
   spawnCamps(chaosMode ? CAMP_COUNT_BONUS : CAMP_COUNT_NORMAL);
 
-  const pushableQty = chaosMode ? 2000 : 20;
+  const pushableQty = chaosMode ? 1600 : 20;
   spawnPushables(pushableQty);
 }
 spawnWorld();
@@ -1448,6 +1477,8 @@ function resolveCollisions() {
 
           earnings *= 0.5;
 
+          playSound('items/lightning_sound.mp3', 0.8);
+
           skeleton.style.display = "block";
           sprite.style.display = "block";
 
@@ -1465,30 +1496,67 @@ function resolveCollisions() {
   }
 
   for (const bh of blackHoles) {
-  const bx = bh.x + BH_SIZE / 2;
-  const by = bh.y + BH_SIZE / 2;
+    const bx = bh.x + BH_SIZE / 2;
+    const by = bh.y + BH_SIZE / 2;
 
-  for (const p of PLAYER_COLLIDERS) {
-    const dx = p.x - bx;
-    const dy = p.y - by;
+    for (const p of PLAYER_COLLIDERS) {
+      const dx = p.x - bx;
+      const dy = p.y - by;
 
-    if (dx * dx + dy * dy < (BH_RADIUS + p.r) ** 2) {
-      enterBlackHole(bh);
-      return false;
+      if (dx * dx + dy * dy < (BH_RADIUS + p.r) ** 2) {
+        enterBlackHole(bh);
+        return false;
+      }
     }
   }
-}
 
   if (tank) {
-  const rect = { x: tank.x, y: tank.y, w: 400, h: 300 };
+    const rect = { x: tank.x, y: tank.y, w: 400, h: 300 };
 
-  for (const p of PLAYER_COLLIDERS) {
-    const nearestX = Math.max(rect.x, Math.min(p.x, rect.x + rect.w));
-    const nearestY = Math.max(rect.y, Math.min(p.y, rect.y + rect.h));
-    const dx = p.x - nearestX;
-    const dy = p.y - nearestY;
+    let collided = false;
+    for (const p of PLAYER_COLLIDERS) {
+      const nearestX = Math.max(rect.x, Math.min(p.x, rect.x + rect.w));
+      const nearestY = Math.max(rect.y, Math.min(p.y, rect.y + rect.h));
+      const dx = p.x - nearestX;
+      const dy = p.y - nearestY;
 
-    if (dx * dx + dy * dy < p.r * p.r) {
+      if (dx * dx + dy * dy < p.r * p.r) {
+        collided = true;
+        break;
+      }
+    }
+
+    if (collided) {
+      // Apply collision response: separate player from tank
+      const playerCenterX = camX + PLAYER_X;
+      const playerCenterY = camY + PLAYER_Y;
+      const tankCenterX = rect.x + rect.w / 2;
+      const tankCenterY = rect.y + rect.h / 2;
+
+      const dx = playerCenterX - tankCenterX;
+      const dy = playerCenterY - tankCenterY;
+      const dist = Math.hypot(dx, dy) || 0.00001;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      // Calculate penetration
+      const playerRadius = PLAYER_W * 0.45; // Approximate
+      const tankRadius = Math.hypot(rect.w / 2, rect.h / 2);
+      const penetration = playerRadius + tankRadius - dist;
+
+      if (penetration > 0) {
+        // Separate player
+        camX += nx * penetration * 0.5;
+        camY += ny * penetration * 0.5;
+
+        // Apply some bounce
+        const speed = Math.hypot(velX, velY);
+        const e = restitutionFromSpeed(speed);
+        velX += nx * speed * e * 0.5;
+        velY += ny * speed * e * 0.5;
+      }
+
+      // Trigger multiplier
       earnings = Math.min(earnings * TANK_MULTIPLIER, targetPayout);
       showMultiplier(TANK_MULTIPLIER);
 
@@ -1496,32 +1564,30 @@ function resolveCollisions() {
       tank = null;
 
       setTimeout(hideMultiplier, 1200);
-      break;
     }
   }
-}
 
   if (camp) {
-  const rect = { x: camp.x, y: camp.y, w: 800, h: 600 };
+    const rect = { x: camp.x, y: camp.y, w: 800, h: 600 };
 
-  for (const p of PLAYER_COLLIDERS) {
-    const nearestX = Math.max(rect.x, Math.min(p.x, rect.x + rect.w));
-    const nearestY = Math.max(rect.y, Math.min(p.y, rect.y + rect.h));
-    const dx = p.x - nearestX;
-    const dy = p.y - nearestY;
+    for (const p of PLAYER_COLLIDERS) {
+      const nearestX = Math.max(rect.x, Math.min(p.x, rect.x + rect.w));
+      const nearestY = Math.max(rect.y, Math.min(p.y, rect.y + rect.h));
+      const dx = p.x - nearestX;
+      const dy = p.y - nearestY;
 
-    if (dx * dx + dy * dy < p.r * p.r) {
-      earnings = Math.min(earnings * CAMP_MULTIPLIER, targetPayout);
-      showMultiplier(CAMP_MULTIPLIER);
+      if (dx * dx + dy * dy < p.r * p.r) {
+        earnings = Math.min(earnings * CAMP_MULTIPLIER, targetPayout);
+        showMultiplier(CAMP_MULTIPLIER);
 
-      camp.el.remove();
-      camp = null;
+        camp.el.remove();
+        camp = null;
 
-      setTimeout(hideMultiplier, 1200);
-      break;
+        setTimeout(hideMultiplier, 1200);
+        break;
+      }
     }
   }
-}
 
 
   let lowest = -Infinity;
@@ -1686,7 +1752,7 @@ const STUCK_TIME_LIMIT = 3000;
 let hardStuckStart = null;
 let lastEarnings = 0;
 const HARD_STUCK_TIME = 6000; //6sec
-const HARD_MOVEMENT_THRESHOLD = 25; 
+const HARD_MOVEMENT_THRESHOLD = 25;
 
 function checkStuck() {
 
@@ -1720,7 +1786,7 @@ function checkStuck() {
   }
 
   const elapsed = now - hardStuckStart;
-  const totalMovement = Math.abs(camY - freezeY); 
+  const totalMovement = Math.abs(camY - freezeY);
 
   const barelyMoving =
     Math.abs(velY) < 0.6 &&
@@ -1779,7 +1845,19 @@ function enterBlackHoleLogic() {
   bhReturnX = camX;
   bhReturnY = camY;
 
-  bhTargetMultiplier = Math.random() * 15 + 1; // Random multiplier between 1 and 16
+  // Calculate max multiplier allowed to reach targetPayout
+  let maxAllowedMult = 1;
+  if (earnings > 0 && targetPayout > earnings) {
+    maxAllowedMult = targetPayout / earnings;
+  } else if (targetPayout === 0) {
+    maxAllowedMult = 0;
+  }
+
+  // Set target multiplier somewhat randomly but capped by the outcome limit
+  // If maxAllowedMult is huge (e.g. insane win), allow it.
+  const randomMult = Math.random() * 15 + 1;
+  bhTargetMultiplier = Math.min(randomMult, maxAllowedMult);
+
   bhCurrentMultiplier = 1;
   bhRiseHeight = 0;
 
@@ -1799,7 +1877,7 @@ function enterBlackHoleLogic() {
   bhMovingBgEl.style.width = VOID_BG_WIDTH + "px";
   bhMovingBgEl.style.height = VOID_BG_HEIGHT + "px";
   bhMovingBgEl.style.left =
-  (SCREEN_W - VOID_BG_WIDTH) / 2 + "px";
+    (SCREEN_W - VOID_BG_WIDTH) / 2 + "px";
 
   bhMovingBgEl.style.top = VOID_ZONE_Y + "px";
   bhMovingBgEl.style.backgroundImage = "url('items/Bonus_bg.png')";
@@ -1860,92 +1938,92 @@ function exitBlackHole() {
 function update() {
   if (!introFinished) return;
 
-if (bhAnimating) {
-  const now = performance.now();
-  const elapsed = now - bhAnimStartTime;
-  const progress = Math.min(elapsed / bhAnimDuration, 1);
-  const currentSize = bhAnimStartSize + (bhAnimEndSize - bhAnimStartSize) * progress;
+  if (bhAnimating) {
+    const now = performance.now();
+    const elapsed = now - bhAnimStartTime;
+    const progress = Math.min(elapsed / bhAnimDuration, 1);
+    const currentSize = bhAnimStartSize + (bhAnimEndSize - bhAnimStartSize) * progress;
 
-  bhAnimEl.style.width = currentSize + "px";
-  bhAnimEl.style.height = currentSize + "px";
-  bhAnimEl.style.left = (parseFloat(bhAnimEl.dataset.x) - currentSize / 2) + "px";
-  bhAnimEl.style.top = (parseFloat(bhAnimEl.dataset.y) - currentSize / 2) + "px";
+    bhAnimEl.style.width = currentSize + "px";
+    bhAnimEl.style.height = currentSize + "px";
+    bhAnimEl.style.left = (parseFloat(bhAnimEl.dataset.x) - currentSize / 2) + "px";
+    bhAnimEl.style.top = (parseFloat(bhAnimEl.dataset.y) - currentSize / 2) + "px";
 
-  if (progress >= 1) {
-    bhAnimating = false;
-    if (bhAnimType === 'enter') {
-      enterBlackHoleLogic();
+    if (progress >= 1) {
+      bhAnimating = false;
+      if (bhAnimType === 'enter') {
+        enterBlackHoleLogic();
+      }
+      bhAnimEl.remove();
+      bhAnimEl = null;
     }
-    bhAnimEl.remove();
-    bhAnimEl = null;
+
+    render();
+    requestAnimationFrame(update);
+    return;
   }
 
-  render();
-  requestAnimationFrame(update);
-  return;
-}
+  if (exitingAnimation) {
+    const now = performance.now();
+    const elapsed = now - exitAnimStart;
+    const duration = 1000; // 1 second animation
+    const progress = Math.min(elapsed / duration, 1);
 
-if (exitingAnimation) {
-  const now = performance.now();
-  const elapsed = now - exitAnimStart;
-  const duration = 1000; // 1 second animation
-  const progress = Math.min(elapsed / duration, 1);
+    // Simple scale animation
+    const scale = 1 + Math.sin(progress * Math.PI) * 0.2;
+    sprite.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(${angle}rad)`;
 
-  // Simple scale animation
-  const scale = 1 + Math.sin(progress * Math.PI) * 0.2;
-  sprite.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(${angle}rad)`;
+    if (progress >= 1) {
+      exitingAnimation = false;
+      sprite.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
+    }
 
-  if (progress >= 1) {
-    exitingAnimation = false;
-    sprite.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
+    render();
+    requestAnimationFrame(update);
+    return;
   }
 
-  render();
-  requestAnimationFrame(update);
-  return;
-}
+  if (inBlackHole) {
+    const now = performance.now();
+    const elapsed = now - bhStartTime;
 
-if (inBlackHole) {
-  const now = performance.now();
-  const elapsed = now - bhStartTime;
+    if (bhShowcaseStart === 0) {
+      camY -= BH_RISE_SPEED;
 
-  if (bhShowcaseStart === 0) {
-    camY -= BH_RISE_SPEED;
+      // Update void sprites
+      voidSprites.forEach(sprite => {
+        sprite.y += sprite.speed;
+        sprite.el.style.left = sprite.x + "px";
+        sprite.el.style.top = sprite.y + "px";
+      });
 
-    // Update void sprites
-    voidSprites.forEach(sprite => {
-      sprite.y += sprite.speed;
-      sprite.el.style.left = sprite.x + "px";
-      sprite.el.style.top = sprite.y + "px";
-    });
+      const riseHeight = VOID_START_Y - camY;
 
-    const riseHeight = VOID_START_Y - camY;
+      bhCurrentMultiplier = Math.min(16, 1 + (riseHeight / 120)); // Increase based on rise height, reaching ~16x at 120 height
+      showMultiplier(bhCurrentMultiplier);
 
-    bhCurrentMultiplier = Math.min(16, 1 + (riseHeight / 120)); // Increase based on rise height, reaching ~16x at 120 height
-    showMultiplier(bhCurrentMultiplier);
-
-    if (bhCurrentMultiplier >= bhTargetMultiplier) {
-      finalEarnings = earnings * bhCurrentMultiplier;
-      bhShowcaseStart = now;
+      if (bhCurrentMultiplier >= bhTargetMultiplier) {
+        finalEarnings = earnings * bhCurrentMultiplier;
+        bhShowcaseStart = now;
+      }
+    } else {
+      // Showcase phase: display multiplier and animate score from original to multiplied for 1 second
+      const showcaseElapsed = now - bhShowcaseStart;
+      const progress = Math.min(showcaseElapsed / 1000, 1);
+      showcaseScore = originalEarnings + (finalEarnings - originalEarnings) * progress;
+      showMultiplier(bhCurrentMultiplier);
+      if (showcaseElapsed >= 1000) {
+        earnings = finalEarnings;
+        exitBlackHole();
+        bhShowcaseStart = 0;
+      }
     }
-  } else {
-    // Showcase phase: display multiplier and animate score from original to multiplied for 1 second
-    const showcaseElapsed = now - bhShowcaseStart;
-    const progress = Math.min(showcaseElapsed / 1000, 1);
-    showcaseScore = originalEarnings + (finalEarnings - originalEarnings) * progress;
-    showMultiplier(bhCurrentMultiplier);
-    if (showcaseElapsed >= 1000) {
-      earnings = finalEarnings;
-      exitBlackHole();
-      bhShowcaseStart = 0;
-    }
+
+    showScore();
+    render();
+    requestAnimationFrame(update);
+    return;
   }
-
-  showScore();
-  render();
-  requestAnimationFrame(update);
-  return;
-}
 
 
 
@@ -1975,7 +2053,7 @@ if (inBlackHole) {
     render();
     requestAnimationFrame(update);
 
-    
+
 
     return;
   }
@@ -2007,7 +2085,7 @@ if (inBlackHole) {
   const distance = Math.hypot(playerX - planeX, playerY - planeY);
 
   if (distance <= 500) {
-    const volume = Math.max(0, 1 - (distance / 500));
+    const volume = Math.max(0, 0.1 - (distance / 500));
     if (!planeSoundPlaying) {
       planeSound = playSound('items/plane_sound.mp3', volume);
       planeSound.loop = true;
@@ -2100,14 +2178,25 @@ if (inBlackHole) {
       landedTime = performance.now();
     } else if (performance.now() - landedTime > 1000) {
       betResolved = true;
-      const payout = earnings;
+      let payout = earnings;
+
+      // Strict enforcement of 0 payout for losses
+      if (isZeroPayoutExplosion || outcomeType === "lose") {
+        payout = 0;
+      }
+      // Cap payout at targetPayout to ensure RTP compliance (handles floating point drifts)
+      // Only cap if not a loss (loss is 0 anyway)
+      if (payout > targetPayout && targetPayout > 0) {
+        payout = targetPayout;
+      }
+
       balance += payout;
 
-      if (isZeroPayoutExplosion) {
+      if (isZeroPayoutExplosion || payout === 0) {
         triggerExplosion();
         isZeroPayoutExplosion = false;
       } else {
-        runOverEl.innerHTML = `RUN OVER<br>Total Winnings: ₹${payout.toFixed(2)}`;
+        runOverEl.innerHTML = `RUN OVER<br>Total Winnings: $${payout.toFixed(2)}`;
         runOverEl.style.display = "block";
         fallStarted = false;
         betPlaced = false;
@@ -2139,7 +2228,7 @@ function render() {
   } else {
     scoreEl.style.display = "block";
     const displayScore = (inBlackHole && bhShowcaseStart > 0) ? showcaseScore : earnings;
-    scoreEl.textContent = `₹${displayScore.toFixed(2)}`;
+    scoreEl.textContent = `$${displayScore.toFixed(2)}`;
     if (inBlackHole && bhShowcaseStart > 0) {
       multiplierEl.classList.add("showcase");
       scoreEl.classList.add("showcase");
@@ -2167,30 +2256,30 @@ function render() {
     p.el.style.top = p.y + "px";
   });
 
-  
-  
+
+
 }
 
 function triggerExplosion() {
-    if (explosionTriggered) return; // Prevent multiple triggers
-    explosionTriggered = true;
-    explosionActive = true;
-    explosionParts = [];
+  if (explosionTriggered) return; // Prevent multiple triggers
+  explosionTriggered = true;
+  explosionActive = true;
+  explosionParts = [];
 
-    // Hide the main sprite
-    const sprite = document.getElementById("sprite");
-    const skeleton = document.getElementById("skeleton");
-    if (sprite) sprite.style.display = "none";
-    if (skeleton) skeleton.style.display = "none";
+  // Hide the main sprite
+  const sprite = document.getElementById("sprite");
+  const skeleton = document.getElementById("skeleton");
+  if (sprite) sprite.style.display = "none";
+  if (skeleton) skeleton.style.display = "none";
 
-    const playerX = camX + PLAYER_X;
-    const playerY = camY + PLAYER_Y;
+  const playerX = camX + PLAYER_X;
+  const playerY = camY + PLAYER_Y;
 
-    // Create body parts with random velocities
-    for (const part of BODY_PARTS) {
-        const el = document.createElement("div");
-        el.className = "explosion-part";
-        el.style.cssText = `
+  // Create body parts with random velocities
+  for (const part of BODY_PARTS) {
+    const el = document.createElement("div");
+    el.className = "explosion-part";
+    el.style.cssText = `
             position: absolute;
             width: ${part.size}px;
             height: ${part.size}px;
@@ -2198,31 +2287,31 @@ function triggerExplosion() {
             pointer-events: none;
             z-index: 10000;
         `;
-        const x = playerX + part.offsetX;
-        const y = playerY + part.offsetY;
-        el.style.left = x + "px";
-        el.style.top = y + "px";
-        world.appendChild(el);
+    const x = playerX + part.offsetX;
+    const y = playerY + part.offsetY;
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    world.appendChild(el);
 
-        // Random explosion velocity outward from center
-        const angle = Math.atan2(part.offsetY, part.offsetX) + (Math.random() - 0.5) * 0.5;
-        const speed = 15 + Math.random() * 20;
-        explosionParts.push({
-            el,
-            x,
-            y,
-            velX: Math.cos(angle) * speed + (Math.random() - 0.5) * 10,
-            velY: Math.sin(angle) * speed - 10 - Math.random() * 15, // Initial upward burst
-            rotation: 0,
-            rotSpeed: (Math.random() - 0.5) * 0.3
-        });
-    }
+    // Random explosion velocity outward from center
+    const angle = Math.atan2(part.offsetY, part.offsetX) + (Math.random() - 0.5) * 0.5;
+    const speed = 15 + Math.random() * 20;
+    explosionParts.push({
+      el,
+      x,
+      y,
+      velX: Math.cos(angle) * speed + (Math.random() - 0.5) * 10,
+      velY: Math.sin(angle) * speed - 10 - Math.random() * 15, // Initial upward burst
+      rotation: 0,
+      rotSpeed: (Math.random() - 0.5) * 0.3
+    });
+  }
 
-    // Show "YOU LOST!" message
-    const lostMsg = document.createElement("div");
-    lostMsg.id = "lostMessage";
-    lostMsg.innerHTML = `<span style="font-size: 72px;">💥</span><br>YOU LOST!`;
-    lostMsg.style.cssText = `
+  // Show "YOU LOST!" message
+  const lostMsg = document.createElement("div");
+  lostMsg.id = "lostMessage";
+  lostMsg.innerHTML = `<span style="font-size: 72px;">💥</span><br>YOU LOST!`;
+  lostMsg.style.cssText = `
         position: fixed;
         top: 30%;
         left: 50%;
@@ -2235,13 +2324,13 @@ function triggerExplosion() {
         text-align: center;
         animation: shake 0.5s ease-in-out;
     `;
-    document.body.appendChild(lostMsg);
+  document.body.appendChild(lostMsg);
 
-    // Add shake animation style if not exists
-    if (!document.getElementById("explosionStyles")) {
-        const style = document.createElement("style");
-        style.id = "explosionStyles";
-        style.textContent = `
+  // Add shake animation style if not exists
+  if (!document.getElementById("explosionStyles")) {
+    const style = document.createElement("style");
+    style.id = "explosionStyles";
+    style.textContent = `
             @keyframes shake {
                 0%, 100% { transform: translateX(-50%) rotate(0deg); }
                 25% { transform: translateX(-50%) rotate(-5deg); }
@@ -2249,59 +2338,57 @@ function triggerExplosion() {
                 75% { transform: translateX(-50%) rotate(-3deg); }
             }
         `;
-        document.head.appendChild(style);
-    }
+    document.head.appendChild(style);
+  }
 
-    // Animate explosion
-    animateExplosion();
+  // Animate explosion
+  animateExplosion();
 }
 
 function animateExplosion() {
-    if (!explosionActive) return;
-    let allOffscreen = true;
-    for (const part of explosionParts) {
-        // Apply gravity
-        part.velY += 0.8;
-        // Apply velocity
-        part.x += part.velX;
-        part.y += part.velY;
-        part.rotation += part.rotSpeed;
-        // Update position
-        part.el.style.left = part.x + "px";
-        part.el.style.top = part.y + "px";
-        part.el.style.transform = `rotate(${part.rotation}rad)`;
-        // Check if still on screen (roughly)
-        if (part.y < WORLDH + 500) {
-            allOffscreen = false;
-        }
+  if (!explosionActive) return;
+  let allOffscreen = true;
+  for (const part of explosionParts) {
+    // Apply gravity
+    part.velY += 0.8;
+    // Apply velocity
+    part.x += part.velX;
+    part.y += part.velY;
+    part.rotation += part.rotSpeed;
+    // Update position
+    part.el.style.left = part.x + "px";
+    part.el.style.top = part.y + "px";
+    part.el.style.transform = `rotate(${part.rotation}rad)`;
+    // Check if still on screen (roughly)
+    if (part.y < WORLDH + 500) {
+      allOffscreen = false;
     }
-    if (!allOffscreen) {
-        requestAnimationFrame(animateExplosion);
-    } else {
-        cleanupExplosion();
-    }
+  }
+  if (!allOffscreen) {
+    requestAnimationFrame(animateExplosion);
+  } else {
+    cleanupExplosion();
+  }
 }
 
 function cleanupExplosion() {
-    explosionActive = false;
-    // Remove body parts
-    for (const part of explosionParts) {
-        if (part.el && part.el.parentNode) {
-            part.el.remove();
-        }
+  explosionActive = false;
+  // Remove body parts
+  for (const part of explosionParts) {
+    if (part.el && part.el.parentNode) {
+      part.el.remove();
     }
-    explosionParts = [];
-    // Remove lost message
-    const lostMsg = document.getElementById("lostMessage");
-    if (lostMsg) lostMsg.remove();
+  }
+  explosionParts = [];
+  // Remove lost message
+  const lostMsg = document.getElementById("lostMessage");
+  if (lostMsg) lostMsg.remove();
 
-    // Keep sprite HIDDEN until game resets - don't restore it here
-    // sprite.style.display will be restored in resetGameWorld()
+  // Keep sprite HIDDEN until game resets - don't restore it here
+  // sprite.style.display will be restored in resetGameWorld()
 
-    // Immediately complete round and reset game
-    completeRound().then(() => {
-        // completeRound will call resetGameWorld which shows the sprite again
-    });
+  // Immediately complete round and reset game
+  hardResetWorld(true, 2000);
 }
 
 // Initial update() call removed; intro logic handles starting the game loop
