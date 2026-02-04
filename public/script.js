@@ -232,8 +232,8 @@ const GROUND_FRICTION = 0.2;
 // Spawn counts by mode
 const TANK_COUNT_NORMAL = 20;
 const TANK_COUNT_BONUS = 20;
-const CAMP_COUNT_NORMAL = 20;
-const CAMP_COUNT_BONUS = 20;
+const CAMP_COUNT_NORMAL = 5; // Camps are much rarer
+const CAMP_COUNT_BONUS = 5;
 
 const VISIBILITY_BUFFER = 2200; // distance between 2
 
@@ -242,7 +242,7 @@ const camps = [];
 
 // Ground trigger multipliers
 const TANK_MULTIPLIER = 5;
-const CAMP_MULTIPLIER = 10;
+const CAMP_MULTIPLIER = 50;
 
 let activeTankIndex = 0;
 let activeCampIndex = 0;
@@ -297,6 +297,10 @@ let landedTime = 0;
 let originalEarnings = 0;
 let finalEarnings = 0;
 let showcaseScore = 0;
+
+// Outcome tracking variables
+let outcomeType = "lose";
+let targetPayout = 0;
 
 
 
@@ -434,7 +438,11 @@ function placeBetAction() {
   fallStarted = true;
   betPlaced = true;
   betResolved = false;
+  // Determine outcome and target payout based on RTP math
+  decideOutcome(effectiveBet);
   lockBetUI();
+  // Hide bonus modal when bet is placed
+  setBonusModalOpen(false);
 }
 
 betBtn.onclick = placeBetAction;
@@ -452,23 +460,26 @@ function decideOutcome(bet) {
   let r = Math.random();
   let cumulative = 0;
 
+  // Use the actual bet amount for payout calculation
+  const actualBet = bet || betAmount;
+
   for (const tier of math.tiers) {
     cumulative += tier.probability;
     if (r < cumulative) {
       outcomeType = tier.name;
-      // Fixed multiplier to ensure exact RTP.
-      // You could add variance here (e.g. +/- 10%) if strictly mean-preserving,
-      // but fixed is most accurate for the requested requirement.
-      targetPayout = multiplierBet * tier.multiplier;
+      // Calculate target payout based on actual bet and tier multiplier
+      targetPayout = actualBet * tier.multiplier;
       isZeroPayoutExplosion = (outcomeType === "lose");
+      console.log(`Outcome decided: ${outcomeType}, targetPayout: $${targetPayout.toFixed(2)}, isZeroPayoutExplosion: ${isZeroPayoutExplosion}`);
       return;
     }
   }
 
-  // Fallback
+  // Fallback (should never reach here if probabilities sum to 1)
   outcomeType = "lose";
   targetPayout = 0;
   isZeroPayoutExplosion = true;
+  console.log(`Outcome fallback: lose, targetPayout: $0, isZeroPayoutExplosion: true`);
 }
 
 
@@ -524,7 +535,7 @@ function setMode(nextMode) {
   if (nextMode === "noZero") {
     noZeroMode = true;
     betAmount = 50;
-    bonusToggle.className = "bonus-chip no-zero";
+    bonusToggle.className = "bonus-btn no-zero";
     bonusToggle.textContent = "No-Zero";
   } else if (nextMode === "chaos") {
     chaosMode = true;
@@ -533,16 +544,16 @@ function setMode(nextMode) {
     // Apply chaos world effects immediately
     clouds.forEach(c => c.el.remove());
     clouds.length = 0;
-    spawnPushables(2000);
+    spawnPushables(1280); // Reduced from 2000 by ~20% for performance
 
     // Bonus/chaos mode: spawn more tanks/camps immediately (round 1 too)
     spawnTanks(TANK_COUNT_BONUS);
     spawnCamps(CAMP_COUNT_BONUS);
 
-    bonusToggle.className = "bonus-chip chaos";
+    bonusToggle.className = "bonus-btn chaos";
     bonusToggle.textContent = "Bonus";
   } else {
-    bonusToggle.className = "bonus-chip";
+    bonusToggle.className = "bonus-btn";
     bonusToggle.textContent = "Bonus";
   }
 
@@ -592,8 +603,13 @@ function hardResetWorld(showLoss = true, delay = 2000) {
   updateBalanceUI();
 
   if (showLoss) {
-    runOverEl.innerHTML = `RUN OVER<br>Total Winnings: $${payoutNum.toFixed(2)}`;
-    runOverEl.style.display = "block";
+    runOverEl.innerHTML = `
+      <div class="final-win-banner">
+        <div class="banner-ribbon">FINAL WIN</div>
+        <div class="banner-amount">$${payoutNum.toFixed(2)}</div>
+      </div>
+    `;
+    runOverEl.style.display = "flex";
   }
 
   setTimeout(() => {
@@ -605,6 +621,11 @@ function hardResetWorld(showLoss = true, delay = 2000) {
     spawnWorld();
     spawnCollectibles(PRESET_SPAWN_COUNT);
     silverjetWrap.style.display = "block";
+
+    // Reset explosion state and restore sprite
+    explosionTriggered = false;
+    sprite.style.display = "block";
+
     unlockBetUI();
     updateBalanceUI();
 
@@ -669,11 +690,11 @@ function spawnCollectibles(count = PRESET_SPAWN_COUNT) {
 
     if (type < 0.4) {
       el.className = "collectible chain";
-      value = 3;
+      value = 1.5; // Reduced from 3 to balance earnings
       arr = chains;
     } else {
       el.className = "collectible music";
-      value = 5;
+      value = 2.5; // Reduced from 5 to balance earnings
       arr = notes;
     }
 
@@ -791,18 +812,13 @@ function spawnCamps(count = CAMP_COUNT_NORMAL) {
 
 function updateGroundEntitiesVisibility() {
   const camBottom = camY + SCREEN_H;
-  const camTop = camY;
 
-  // By default, no active triggers.
-  tank = null;
-  camp = null;
-
+  // Visibility update only - collision handled in resolveCollisions
   // ---- TANK ----
   tanks.forEach(t => {
     const dy = Math.abs(t.y - camBottom);
     if (dy < VISIBILITY_BUFFER) {
       t.el.style.display = "block";
-      if (!tank) tank = t; // Set to first visible tank for collision
     } else {
       t.el.style.display = "none";
     }
@@ -813,7 +829,6 @@ function updateGroundEntitiesVisibility() {
     const dy = Math.abs(c.y - camBottom);
     if (dy < VISIBILITY_BUFFER) {
       c.el.style.display = "block";
-      if (!camp) camp = c; // Set to first visible camp for collision
     } else {
       c.el.style.display = "none";
     }
@@ -1075,7 +1090,7 @@ function spawnWorld() {
   spawnTanks(chaosMode ? TANK_COUNT_BONUS : TANK_COUNT_NORMAL);
   spawnCamps(chaosMode ? CAMP_COUNT_BONUS : CAMP_COUNT_NORMAL);
 
-  const pushableQty = chaosMode ? 1600 : 20;
+  const pushableQty = chaosMode ? 1280 : 16; // Reduced by 20% for performance
   spawnPushables(pushableQty);
 }
 spawnWorld();
@@ -1510,17 +1525,28 @@ function resolveCollisions() {
     }
   }
 
-  if (tank) {
-    const rect = { x: tank.x, y: tank.y, w: 400, h: 300 };
+  // Handle TANK collisions (iterate all visible/nearby tanks)
+  const TANK_W = 500;
+  const TANK_H = 375;
+  for (let i = tanks.length - 1; i >= 0; i--) {
+    const t = tanks[i];
+    // Check if near player vertically
+    if (Math.abs(t.y - (camY + SCREEN_H)) > 2000) continue;
 
+    const rect = { x: t.x, y: t.y, w: TANK_W, h: TANK_H };
     let collided = false;
+
+    // Use a slightly more generous hit check for ground entities
+    const HIT_PADDING = 30;
+
     for (const p of PLAYER_COLLIDERS) {
       const nearestX = Math.max(rect.x, Math.min(p.x, rect.x + rect.w));
       const nearestY = Math.max(rect.y, Math.min(p.y, rect.y + rect.h));
       const dx = p.x - nearestX;
       const dy = p.y - nearestY;
 
-      if (dx * dx + dy * dy < p.r * p.r) {
+      // Expand hit radius slightly for easier collection
+      if (dx * dx + dy * dy < (p.r + HIT_PADDING) ** 2) {
         collided = true;
         break;
       }
@@ -1540,14 +1566,14 @@ function resolveCollisions() {
       const ny = dy / dist;
 
       // Calculate penetration
-      const playerRadius = PLAYER_W * 0.45; // Approximate
+      const playerRadius = PLAYER_W * 0.45;
       const tankRadius = Math.hypot(rect.w / 2, rect.h / 2);
       const penetration = playerRadius + tankRadius - dist;
 
       if (penetration > 0) {
         // Separate player
-        camX += nx * penetration * 0.5;
-        camY += ny * penetration * 0.5;
+        camX += nx * penetration * 0.2; // Softer separation
+        camY += ny * penetration * 0.2;
 
         // Apply some bounce
         const speed = Math.hypot(velX, velY);
@@ -1560,15 +1586,24 @@ function resolveCollisions() {
       earnings = Math.min(earnings * TANK_MULTIPLIER, targetPayout);
       showMultiplier(TANK_MULTIPLIER);
 
-      tank.el.remove();
-      tank = null;
+      t.el.remove();
+      tanks.splice(i, 1); // Remove from logic array
 
       setTimeout(hideMultiplier, 1200);
     }
   }
 
-  if (camp) {
-    const rect = { x: camp.x, y: camp.y, w: 800, h: 600 };
+  // Handle CAMP collisions
+  const CAMP_W = 800;
+  const CAMP_H = 600;
+
+  for (let i = camps.length - 1; i >= 0; i--) {
+    const c = camps[i];
+    if (Math.abs(c.y - (camY + SCREEN_H)) > 2000) continue;
+
+    const rect = { x: c.x, y: c.y, w: CAMP_W, h: CAMP_H };
+    let collided = false;
+    const HIT_PADDING = 30;
 
     for (const p of PLAYER_COLLIDERS) {
       const nearestX = Math.max(rect.x, Math.min(p.x, rect.x + rect.w));
@@ -1576,16 +1611,50 @@ function resolveCollisions() {
       const dx = p.x - nearestX;
       const dy = p.y - nearestY;
 
-      if (dx * dx + dy * dy < p.r * p.r) {
-        earnings = Math.min(earnings * CAMP_MULTIPLIER, targetPayout);
-        showMultiplier(CAMP_MULTIPLIER);
-
-        camp.el.remove();
-        camp = null;
-
-        setTimeout(hideMultiplier, 1200);
+      if (dx * dx + dy * dy < (p.r + HIT_PADDING) ** 2) {
+        collided = true;
         break;
       }
+    }
+
+    if (collided) {
+      // Apply collision response: separate player from camp
+      const playerCenterX = camX + PLAYER_X;
+      const playerCenterY = camY + PLAYER_Y;
+      const campCenterX = rect.x + rect.w / 2;
+      const campCenterY = rect.y + rect.h / 2;
+
+      const dx = playerCenterX - campCenterX;
+      const dy = playerCenterY - campCenterY;
+      const dist = Math.hypot(dx, dy) || 0.00001;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      // Calculate penetration
+      const playerRadius = PLAYER_W * 0.45;
+      const campRadius = Math.hypot(rect.w / 2, rect.h / 2);
+      const penetration = playerRadius + campRadius - dist;
+
+      if (penetration > 0) {
+        // Separate player
+        camX += nx * penetration * 0.2;
+        camY += ny * penetration * 0.2;
+
+        // Apply some bounce
+        const speed = Math.hypot(velX, velY);
+        const e = restitutionFromSpeed(speed);
+        velX += nx * speed * e * 0.5;
+        velY += ny * speed * e * 0.5;
+      }
+
+      // Trigger multiplier - camp is 50x!
+      earnings = Math.min(earnings * CAMP_MULTIPLIER, targetPayout);
+      showMultiplier(CAMP_MULTIPLIER);
+
+      c.el.remove();
+      camps.splice(i, 1);
+
+      setTimeout(hideMultiplier, 1200);
     }
   }
 
@@ -1720,7 +1789,8 @@ function resolveCollisions() {
       }
 
       // Apply force to pushable with reduced movement to simulate mass
-      const pushForce = 2.0;
+      // Push force increased by 15% for easier pushing
+      const pushForce = 2.3;
       p.velX += -nx * pushForce * 0.5;
       p.velY += -ny * pushForce * 0.5;
 
@@ -2088,8 +2158,10 @@ function update() {
     const volume = Math.max(0, 0.1 - (distance / 500));
     if (!planeSoundPlaying) {
       planeSound = playSound('items/plane_sound.mp3', volume);
-      planeSound.loop = true;
-      planeSoundPlaying = true;
+      if (planeSound) {
+        planeSound.loop = true;
+        planeSoundPlaying = true;
+      }
     } else if (planeSound) {
       planeSound.volume = volume;
     }
@@ -2134,7 +2206,7 @@ function update() {
   if (betPlaced && fallStarted && velY > 0 && !fallScorePaused) {
     const fallDistance = camY - lastCamY;
     if (fallDistance > 2)
-      earnings += fallDistance * Math.sqrt(multiplierBet) * 0.00015;
+      earnings += fallDistance * Math.sqrt(multiplierBet) * 0.00006; // Reduced from 0.00015 to balance earnings
   }
 
   function checkPickup(arr) {
@@ -2196,8 +2268,13 @@ function update() {
         triggerExplosion();
         isZeroPayoutExplosion = false;
       } else {
-        runOverEl.innerHTML = `RUN OVER<br>Total Winnings: $${payout.toFixed(2)}`;
-        runOverEl.style.display = "block";
+        runOverEl.innerHTML = `
+          <div class="final-win-banner">
+            <div class="banner-ribbon">FINAL WIN</div>
+            <div class="banner-amount">$${payout.toFixed(2)}</div>
+          </div>
+        `;
+        runOverEl.style.display = "flex";
         fallStarted = false;
         betPlaced = false;
         updateBalanceUI();
@@ -2392,3 +2469,66 @@ function cleanupExplosion() {
 }
 
 // Initial update() call removed; intro logic handles starting the game loop
+
+// ========= MENU DROPDOWN & INFO MODALS =========
+
+const menuBtn = document.getElementById("menuBtn");
+const menuDropdown = document.getElementById("menuDropdown");
+const rulesBtn = document.getElementById("rulesBtn");
+const howToPlayBtn = document.getElementById("howToPlayBtn");
+const rulesModal = document.getElementById("rulesModal");
+const howToPlayModal = document.getElementById("howToPlayModal");
+const closeRulesModal = document.getElementById("closeRulesModal");
+const closeHowToPlayModal = document.getElementById("closeHowToPlayModal");
+
+// Toggle menu dropdown
+menuBtn.onclick = (e) => {
+  e.stopPropagation();
+  menuDropdown.classList.toggle("show");
+};
+
+// Close dropdown when clicking outside
+document.addEventListener("click", (e) => {
+  if (!menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
+    menuDropdown.classList.remove("show");
+  }
+});
+
+// Open Rules modal
+rulesBtn.onclick = () => {
+  menuDropdown.classList.remove("show");
+  rulesModal.classList.add("show");
+};
+
+// Open How to Play modal
+howToPlayBtn.onclick = () => {
+  menuDropdown.classList.remove("show");
+  howToPlayModal.classList.add("show");
+};
+
+// Close modals
+closeRulesModal.onclick = () => {
+  rulesModal.classList.remove("show");
+};
+
+closeHowToPlayModal.onclick = () => {
+  howToPlayModal.classList.remove("show");
+};
+
+// Close modals when clicking backdrop
+rulesModal.addEventListener("click", (e) => {
+  if (e.target === rulesModal) rulesModal.classList.remove("show");
+});
+
+howToPlayModal.addEventListener("click", (e) => {
+  if (e.target === howToPlayModal) howToPlayModal.classList.remove("show");
+});
+
+// Close modals with Escape key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    rulesModal.classList.remove("show");
+    howToPlayModal.classList.remove("show");
+    menuDropdown.classList.remove("show");
+  }
+});

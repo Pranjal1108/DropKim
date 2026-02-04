@@ -78,12 +78,52 @@
       <div class="bet-ui" aria-label="Bet controls">
         <!-- Left: Menu & Balance -->
         <div class="bet-ui-left">
-          <button class="bet-menu-btn" aria-label="Menu">
-            <div class="hamburger"></div>
-          </button>
+          <div class="menu-container">
+            <button class="bet-menu-btn" id="menuBtn" aria-label="Menu">
+              <div class="hamburger"></div>
+            </button>
+            <div class="menu-dropdown" id="menuDropdown">
+              <button class="menu-item" id="rulesBtn">📜 Rules</button>
+              <button class="menu-item" id="howToPlayBtn">🎮 How to Play</button>
+            </div>
+          </div>
           <div class="balance-container">
             <span class="balance-label">Balance</span>
             <span class="balance-value" id="balance">$1000.00</span>
+          </div>
+        </div>
+
+        <!-- Rules Modal -->
+        <div id="rulesModal" class="info-modal">
+          <div class="info-modal-content">
+            <button class="info-modal-close" id="closeRulesModal">&times;</button>
+            <h2>📜 Rules</h2>
+            <ul>
+              <li>Place a bet to start the game</li>
+              <li>Your character drops from the plane and falls through the sky</li>
+              <li>Earnings are capped based on the outcome determined at bet placement</li>
+              <li>Collect satellites and notes to increase earnings</li>
+              <li>Avoid dark clouds - they shock you and halve your earnings</li>
+              <li>Black holes multiply your current earnings</li>
+              <li>Land on the ground to complete the round</li>
+              <li>The game has a 96% RTP (Return to Player)</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- How to Play Modal -->
+        <div id="howToPlayModal" class="info-modal">
+          <div class="info-modal-content">
+            <button class="info-modal-close" id="closeHowToPlayModal">&times;</button>
+            <h2>🎮 How to Play</h2>
+            <ul>
+              <li><strong>Place Bet:</strong> Use +/- buttons or type amount, then press the BET button or Spacebar</li>
+              <li><strong>Movement:</strong> Your character moves automatically based on physics</li>
+              <li><strong>Collect Items:</strong> Satellites (🛸) give $1.50, Music Notes (🎵) give $2.50</li>
+              <li><strong>Bonus Mode:</strong> Costs 10x your bet but offers higher volatility</li>
+              <li><strong>No-Zero Mode:</strong> $50 fixed bet with guaranteed minimum payout</li>
+              <li><strong>Auto Bet:</strong> Press 'A' button to enable automatic betting</li>
+            </ul>
           </div>
         </div>
 

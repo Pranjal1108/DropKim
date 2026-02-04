@@ -1,0 +1,11 @@
+HOW TO UPLOAD TO STAKE
+
+1. Open this "math" folder.
+2. Select ALL files inside it:
+   - "base" folder
+   - "bonus" folder
+   - "index.json" file
+3. Right-click > Send to > Compressed (zipped) folder.
+4. Upload that new zip file.
+
+IMPORTANT: Do NOT zip the "math" folder itself. You must zip the CONTENTS of the folder so that "index.json" is at the very root of the zip file.
