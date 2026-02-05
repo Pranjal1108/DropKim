@@ -301,6 +301,7 @@ let showcaseScore = 0;
 // Outcome tracking variables
 let outcomeType = "lose";
 let targetPayout = 0;
+let zeroPayoutStartY = 0; // Track starting Y for zero payout early kill
 
 
 
@@ -435,6 +436,7 @@ function placeBetAction() {
   camX = camY = velX = velY = angle = angVel = 0;
   earnings = 0;
   lastCamY = 0;
+  zeroPayoutStartY = camY; // Store starting Y for zero payout check
   fallStarted = true;
   betPlaced = true;
   betResolved = false;
@@ -1365,37 +1367,40 @@ function resolveCollisions() {
 
   const contacts = [];
 
-  for (const cloud of clouds) {
+  // Skip cloud collisions entirely for zero payout - fall straight through
+  if (!isZeroPayoutExplosion) {
+    for (const cloud of clouds) {
 
-    if (Math.abs(cloud.y - (camY + PLAYER_Y)) > 900)
-      continue;
+      if (Math.abs(cloud.y - (camY + PLAYER_Y)) > 900)
+        continue;
 
-    for (const c of cloud.circles) {
-      const cx = c.x;
-      const cy = c.y;
-      const cr = c.r;
+      for (const c of cloud.circles) {
+        const cx = c.x;
+        const cy = c.y;
+        const cr = c.r;
 
-      for (const p of PLAYER_COLLIDERS) {
-        const dx = p.x - cx;
-        const dy = p.y - cy;
-        const distSq = dx * dx + dy * dy;
-        const minDist = p.r + cr;
-        if (distSq >= minDist * minDist) continue;
+        for (const p of PLAYER_COLLIDERS) {
+          const dx = p.x - cx;
+          const dy = p.y - cy;
+          const distSq = dx * dx + dy * dy;
+          const minDist = p.r + cr;
+          if (distSq >= minDist * minDist) continue;
 
-        const dist = Math.sqrt(distSq) || 0.00001;
-        const nx = dx / dist;
-        const ny = dy / dist;
+          const dist = Math.sqrt(distSq) || 0.00001;
+          const nx = dx / dist;
+          const ny = dy / dist;
 
-        contacts.push({
-          nx,
-          ny,
-          penetration: (minDist - dist),
-          px: p.x,
-          py: p.y
-        });
+          contacts.push({
+            nx,
+            ny,
+            penetration: (minDist - dist),
+            px: p.x,
+            py: p.y
+          });
+        }
       }
     }
-  }
+  } // End of cloud collision skip for zero payout
 
 
 
@@ -1510,17 +1515,20 @@ function resolveCollisions() {
     }
   }
 
-  for (const bh of blackHoles) {
-    const bx = bh.x + BH_SIZE / 2;
-    const by = bh.y + BH_SIZE / 2;
+  // Skip black hole entry for zero payout - don't let player get multipliers
+  if (!isZeroPayoutExplosion) {
+    for (const bh of blackHoles) {
+      const bx = bh.x + BH_SIZE / 2;
+      const by = bh.y + BH_SIZE / 2;
 
-    for (const p of PLAYER_COLLIDERS) {
-      const dx = p.x - bx;
-      const dy = p.y - by;
+      for (const p of PLAYER_COLLIDERS) {
+        const dx = p.x - bx;
+        const dy = p.y - by;
 
-      if (dx * dx + dy * dy < (BH_RADIUS + p.r) ** 2) {
-        enterBlackHole(bh);
-        return false;
+        if (dx * dx + dy * dy < (BH_RADIUS + p.r) ** 2) {
+          enterBlackHole(bh);
+          return false;
+        }
       }
     }
   }
@@ -2154,7 +2162,7 @@ function update() {
   const planeY = silverjetWrap.offsetTop + silverjetWrap.offsetHeight / 2;
   const distance = Math.hypot(playerX - planeX, playerY - planeY);
 
-  if (distance <= 500) {
+  if (distance <= 500 && !soundMuted) {
     const volume = Math.max(0, 0.1 - (distance / 500));
     if (!planeSoundPlaying) {
       planeSound = playSound('items/plane_sound.mp3', volume);
@@ -2181,6 +2189,22 @@ function update() {
   camX += velX;
   camY += velY;
 
+  // Check for early zero payout explosion after falling ~150 pixels
+  // Instant zero payout - trigger explosion immediately after just 10px fall
+  if (isZeroPayoutExplosion && fallStarted && !betResolved) {
+    const fallDistance = camY - zeroPayoutStartY;
+    if (fallDistance >= 10) {
+      betResolved = true;
+      earnings = 0;
+      triggerExplosion();
+      isZeroPayoutExplosion = false;
+      // Skip rest of update since explosion is triggered
+      render();
+      requestAnimationFrame(update);
+      return;
+    }
+  }
+
   // Update pushable positions
   for (const p of pushables) {
     p.x += p.velX;
@@ -2203,13 +2227,17 @@ function update() {
     angleAccumulator = 0;
   }
 
-  if (betPlaced && fallStarted && velY > 0 && !fallScorePaused) {
+  // Skip fall earnings for zero payout
+  if (betPlaced && fallStarted && velY > 0 && !fallScorePaused && !isZeroPayoutExplosion) {
     const fallDistance = camY - lastCamY;
     if (fallDistance > 2)
       earnings += fallDistance * Math.sqrt(multiplierBet) * 0.00006; // Reduced from 0.00015 to balance earnings
   }
 
   function checkPickup(arr) {
+    // Skip item collection for zero payout - no earnings allowed
+    if (isZeroPayoutExplosion) return;
+
     const playerColliders = getPlayerColliders();
     const itemRadius = 85; // Assuming 170px width/height, so radius 85
 
@@ -2250,16 +2278,14 @@ function update() {
       landedTime = performance.now();
     } else if (performance.now() - landedTime > 1000) {
       betResolved = true;
-      let payout = earnings;
 
-      // Strict enforcement of 0 payout for losses
+      // STRICT RTP ENFORCEMENT: Payout is EXACTLY the predetermined targetPayout
+      // Gameplay earnings are purely visual - final payout is fixed at bet time
+      let payout = targetPayout;
+
+      // Zero payout for losses
       if (isZeroPayoutExplosion || outcomeType === "lose") {
         payout = 0;
-      }
-      // Cap payout at targetPayout to ensure RTP compliance (handles floating point drifts)
-      // Only cap if not a loss (loss is 0 anyway)
-      if (payout > targetPayout && targetPayout > 0) {
-        payout = targetPayout;
       }
 
       balance += payout;
@@ -2304,7 +2330,9 @@ function render() {
     scoreEl.classList.remove("showcase");
   } else {
     scoreEl.style.display = "block";
-    const displayScore = (inBlackHole && bhShowcaseStart > 0) ? showcaseScore : earnings;
+    // Force $0 display for zero payout rounds
+    let displayScore = (inBlackHole && bhShowcaseStart > 0) ? showcaseScore : earnings;
+    if (isZeroPayoutExplosion) displayScore = 0;
     scoreEl.textContent = `$${displayScore.toFixed(2)}`;
     if (inBlackHole && bhShowcaseStart > 0) {
       multiplierEl.classList.add("showcase");

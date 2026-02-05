@@ -4,6 +4,7 @@
     "total_weight": 10000,
     "files": {
         "lookup": "./lookup_table.json",
-        "csv": "./table.csv"
+        "csv": "./table.csv",
+        "zst": "./table.csv.zst"
     }
 }
