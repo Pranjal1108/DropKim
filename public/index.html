@@ -58,7 +58,7 @@
 
 
 
-          <div id="score">$0</div>
+          <div id="score">$0.00</div>
           <div id="multiplier">×1</div>
           <div id="flipText"></div>
 
@@ -99,15 +99,56 @@
             <button class="info-modal-close" id="closeRulesModal">&times;</button>
             <h2>📜 Rules</h2>
             <ul>
-              <li>Place a bet to start the game</li>
+              <li>Place an entry to start the game</li>
               <li>Your character drops from the plane and falls through the sky</li>
-              <li>Earnings are capped based on the outcome determined at bet placement</li>
-              <li>Collect satellites and notes to increase earnings</li>
+              <li>Earnings are capped based on the outcome determined at start</li>
+              <li>Collect satellites and notes to increase earnings ($1.50 / $2.50)</li>
               <li>Avoid dark clouds - they shock you and halve your earnings</li>
               <li>Black holes multiply your current earnings</li>
               <li>Land on the ground to complete the round</li>
               <li>The game has a 96% RTP (Return to Player)</li>
             </ul>
+
+            <h3>💰 Paytable & Multipliers</h3>
+            <table class="paytable">
+              <tr>
+                <th>Outcome</th>
+                <th>Multiplier</th>
+                <th>Probability (Base)</th>
+              </tr>
+              <tr>
+                <td>Insane Drop</td>
+                <td>100x</td>
+                <td>0.02%</td>
+              </tr>
+              <tr>
+                <td>Big Drop</td>
+                <td>20x</td>
+                <td>0.50%</td>
+              </tr>
+              <tr>
+                <td>Medium Drop</td>
+                <td>6x</td>
+                <td>4.00%</td>
+              </tr>
+              <tr>
+                <td>Small Drop</td>
+                <td>2x</td>
+                <td>30.00%</td>
+              </tr>
+              <tr>
+                <td>Crash</td>
+                <td>0x</td>
+                <td>65.48%</td>
+              </tr>
+            </table>
+
+            <div class="legal-disclaimer">
+              Malfunction voids all pays and plays. A consistent internet connection is required. In the event of a
+              disconnection, reload the game to finish any uncompleted rounds. The expected return is calculated over
+              many plays. Animations are not representative of any physical device, and are for illustrative purposes
+              only. TM and © 2025 Stake Engine.
+            </div>
           </div>
         </div>
 
@@ -117,12 +158,12 @@
             <button class="info-modal-close" id="closeHowToPlayModal">&times;</button>
             <h2>🎮 How to Play</h2>
             <ul>
-              <li><strong>Place Bet:</strong> Use +/- buttons or type amount, then press the BET button or Spacebar</li>
+              <li><strong>Entry:</strong> Use +/- buttons or type amount, then press the PLAY button or Spacebar</li>
               <li><strong>Movement:</strong> Your character moves automatically based on physics</li>
               <li><strong>Collect Items:</strong> Satellites (🛸) give $1.50, Music Notes (🎵) give $2.50</li>
-              <li><strong>Bonus Mode:</strong> Costs 10x your bet but offers higher volatility</li>
-              <li><strong>No-Zero Mode:</strong> $50 fixed bet with guaranteed minimum payout</li>
-              <li><strong>Auto Bet:</strong> Press 'A' button to enable automatic betting</li>
+              <li><strong>Bonus Mode:</strong> Costs 10x your entry but offers higher volatility</li>
+              <li><strong>No-Zero Mode:</strong> $50.00 fixed entry with guaranteed minimum payout</li>
+              <li><strong>Auto Play:</strong> Press 'A' button to enable automatic play</li>
             </ul>
           </div>
         </div>
@@ -133,8 +174,9 @@
           <div class="bet-control-pill">
             <button id="minus" type="button" class="bet-pill-btn">−</button>
             <div class="bet-input-container">
-              <span class="bet-label">Bet</span>
-              <input id="betAmount" class="bet-input" type="number" min="1" max="10000" value="1.00">
+              <span class="bet-label">Entry</span>
+              <span class="currency-symbol">$</span>
+              <input id="betAmount" class="bet-input" type="number" min="0.10" max="1000" step="0.10" value="1.00">
             </div>
             <button id="plus" type="button" class="bet-pill-btn">+</button>
           </div>
@@ -148,14 +190,15 @@
 
         </div>
 
-        <!-- Right: Big Bet Button -->
+        <!-- Right: Big Play Button -->
         <div class="bet-ui-right">
-          <button id="placeBet" type="button" class="bet-main-button">Bet</button>
+          <button id="placeBet" type="button" class="bet-main-button">Play</button>
         </div>
       </div>
     </div>
   </main>
 
+  <script src="math_no_zero.js"></script>
   <script src="math_base.js"></script>
   <script src="math_bonus.js"></script>
   <script src="script.js"></script>

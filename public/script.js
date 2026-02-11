@@ -149,7 +149,7 @@ function onKeyPress() {
   introFinished = true;
   backgroundMusic.play().catch(e => console.warn('Background music play failed:', e));
   fadeBackgroundMusic(0.3); // Fade in to 30% volume
-  update(); // Start the game loop
+  requestAnimationFrame(update); // Start the game loop
 }
 
 // === PERFORMANCE CONSTANTS ===
@@ -184,6 +184,7 @@ let chaosMode = false;
 let multiplierBet = 10;
 
 
+let frameCounter = 0;
 
 const SCREEN_W = 1920;
 const SCREEN_H = 1200;
@@ -201,8 +202,8 @@ ground.style.width = "16400px";
 ground.style.backgroundSize = "8200px 130%";
 
 
-const cloudquantity = 500;
-const darkcloudquantity = 40;
+const cloudquantity = 700;
+const darkcloudquantity = 50;
 const PRESET_SPAWN_COUNT = 600;
 
 const BH_RADIUS = 100;
@@ -224,16 +225,19 @@ let fallStarted = false;
 let betPlaced = false;
 let betResolved = false;
 
-const GRAVITY = 0.55;
-const MAX_FALL = 30;
+// Physics Constants
+// Physics Constants (modified dynamically by mode)
+let GRAVITY = 0.55; // Base: 0.55
+let MAX_FALL = 22;  // Base: 22
+
 const AIR_FRICTION = 0.95;
 const GROUND_FRICTION = 0.2;
 
 // Spawn counts by mode
 const TANK_COUNT_NORMAL = 20;
-const TANK_COUNT_BONUS = 20;
-const CAMP_COUNT_NORMAL = 5; // Camps are much rarer
-const CAMP_COUNT_BONUS = 5;
+const TANK_COUNT_BONUS = 25;
+const CAMP_COUNT_NORMAL = 10;
+const CAMP_COUNT_BONUS = 15;
 
 const VISIBILITY_BUFFER = 2200; // distance between 2
 
@@ -409,15 +413,36 @@ const soundBtn = document.getElementById("soundBtn");
 let soundMuted = false;
 soundBtn.onclick = () => {
   soundMuted = !soundMuted;
-  backgroundMusic.volume = soundMuted ? 0 : 0.3;
-  soundBtn.textContent = soundMuted ? "🔇" : "🔊";
+
+  if (soundMuted) {
+    // Mute everything immediately
+    backgroundMusic.volume = 0;
+    if (planeSound) {
+      planeSound.pause();
+      planeSound = null;
+      planeSoundPlaying = false;
+    }
+    soundBtn.textContent = "🔇";
+  } else {
+    // Unmute
+    backgroundMusic.volume = 0.3;
+    soundBtn.textContent = "🔊";
+  }
 };
 
 let autoBetActive = false;
 const autoBetBtn = document.getElementById("autoBetBtn");
 autoBetBtn.onclick = () => {
-  autoBetActive = !autoBetActive;
-  autoBetBtn.classList.toggle("active", autoBetActive);
+  if (!autoBetActive) {
+    // Show confirmation before enabling
+    if (confirm("Enable Auto Play? This will automatically place entries until stopped.")) {
+      autoBetActive = true;
+      autoBetBtn.classList.add("active");
+    }
+  } else {
+    autoBetActive = false;
+    autoBetBtn.classList.remove("active");
+  }
 };
 
 function placeBetAction() {
@@ -427,7 +452,7 @@ function placeBetAction() {
     if (autoBetActive) {
       autoBetActive = false;
       autoBetBtn.classList.remove("active");
-      alert("Insufficient balance for Auto Bet");
+      alert("Insufficient balance for Auto Play");
     }
     return;
   }
@@ -442,6 +467,22 @@ function placeBetAction() {
   betResolved = false;
   // Determine outcome and target payout based on RTP math
   decideOutcome(effectiveBet);
+
+  // === PHYSICS TUNING ===
+  // Normalize speed to feel like Base Mode
+  if (noZeroMode) {
+    // No-Zero has clouds + collisions -> Increase gravity/max speed to push through faster
+    GRAVITY = 0.85;
+    MAX_FALL = 26;
+  } else if (chaosMode) {
+    // Bonus/Chaos has NO clouds -> Reduction needed to match base feel
+    GRAVITY = 0.45;
+    MAX_FALL = 18;
+  } else {
+    // Base Mode Defaults
+    GRAVITY = 0.55;
+    MAX_FALL = 22;
+  }
   lockBetUI();
   // Hide bonus modal when bet is placed
   setBonusModalOpen(false);
@@ -458,7 +499,10 @@ document.addEventListener("keydown", (e) => {
 });
 
 function decideOutcome(bet) {
-  const math = bonusMode ? BonusMath : BaseMath;
+  let math = BaseMath;
+  if (chaosMode) math = BonusMath;
+  else if (noZeroMode) math = NoZeroMath;
+
   let r = Math.random();
   let cumulative = 0;
 
@@ -469,10 +513,12 @@ function decideOutcome(bet) {
     cumulative += tier.probability;
     if (r < cumulative) {
       outcomeType = tier.name;
+
       // Calculate target payout based on actual bet and tier multiplier
       targetPayout = actualBet * tier.multiplier;
+
       isZeroPayoutExplosion = (outcomeType === "lose");
-      console.log(`Outcome decided: ${outcomeType}, targetPayout: $${targetPayout.toFixed(2)}, isZeroPayoutExplosion: ${isZeroPayoutExplosion}`);
+      console.log(`Outcome decided: ${outcomeType}, targetPayout: ${targetPayout.toFixed(2)}, isZeroPayoutExplosion: ${isZeroPayoutExplosion}`);
       return;
     }
   }
@@ -481,7 +527,7 @@ function decideOutcome(bet) {
   outcomeType = "lose";
   targetPayout = 0;
   isZeroPayoutExplosion = true;
-  console.log(`Outcome fallback: lose, targetPayout: $0, isZeroPayoutExplosion: true`);
+  console.log(`Outcome fallback: lose, targetPayout: 0, isZeroPayoutExplosion: true`);
 }
 
 
@@ -546,9 +592,8 @@ function setMode(nextMode) {
     // Apply chaos world effects immediately
     clouds.forEach(c => c.el.remove());
     clouds.length = 0;
-    spawnPushables(1280); // Reduced from 2000 by ~20% for performance
+    spawnPushables(1280);
 
-    // Bonus/chaos mode: spawn more tanks/camps immediately (round 1 too)
     spawnTanks(TANK_COUNT_BONUS);
     spawnCamps(CAMP_COUNT_BONUS);
 
@@ -568,7 +613,7 @@ function updateBonusButtons() {
     <div class="bonus-title">No Zero Payout</div>
     <div class="bonus-image" style="background-image: url('items/No_0_background.png');"></div>
     <div class="bonus-description">Guaranteed minimum payout</div>
-    <div class="bonus-amount">$50 bet</div>
+    <div class="bonus-amount">$50 entry</div>
     <button class="bonus-toggle-btn ${noZeroMode ? 'active' : ''}">${noZeroMode ? 'Deactivate' : 'Activate'}</button>
   `;
 
@@ -576,7 +621,7 @@ function updateBonusButtons() {
     <div class="bonus-title">Chaos Mode</div>
     <div class="bonus-image" style="background-image: url('items/satellite_background.png');"></div>
     <div class="bonus-description">Increased rewards and obstacles</div>
-    <div class="bonus-amount">$100 bet</div>
+    <div class="bonus-amount">$100 entry</div>
     <button class="bonus-toggle-btn ${chaosMode ? 'active' : ''}">${chaosMode ? 'Deactivate' : 'Activate'}</button>
   `;
 }
@@ -639,6 +684,7 @@ function hardResetWorld(showLoss = true, delay = 2000) {
         }
       }, 500);
     }
+
   }, delay);
 }
 
@@ -788,8 +834,8 @@ function spawnCamps(count = CAMP_COUNT_NORMAL) {
   const groundY = parseInt(ground.style.top);
 
   // Even spacing, separate from tanks.
-  const MIN_X = SCREEN_W * 5;
-  const MAX_X = SCREEN_W * 10;
+  const MIN_X = -SCREEN_W * 15;
+  const MAX_X = SCREEN_W * 15;
   const step = count > 1 ? (MAX_X - MIN_X) / (count - 1) : 0;
 
   for (let i = 0; i < count; i++) {
@@ -819,20 +865,20 @@ function updateGroundEntitiesVisibility() {
   // ---- TANK ----
   tanks.forEach(t => {
     const dy = Math.abs(t.y - camBottom);
-    if (dy < VISIBILITY_BUFFER) {
-      t.el.style.display = "block";
-    } else {
-      t.el.style.display = "none";
+    const visible = dy < VISIBILITY_BUFFER;
+    const value = visible ? "block" : "none";
+    if (t.el.style.display !== value) {
+      t.el.style.display = value;
     }
   });
 
   // ---- CAMP ----
   camps.forEach(c => {
     const dy = Math.abs(c.y - camBottom);
-    if (dy < VISIBILITY_BUFFER) {
-      c.el.style.display = "block";
-    } else {
-      c.el.style.display = "none";
+    const visible = dy < VISIBILITY_BUFFER;
+    const value = visible ? "block" : "none";
+    if (c.el.style.display !== value) {
+      c.el.style.display = value;
     }
   });
 }
@@ -1243,26 +1289,38 @@ function recycleClouds() {
     if (c.y < TOP_LIMIT - REUSE_DISTANCE) {
       c.y = BOTTOM_LIMIT - Math.random() * 1200;
       c.x = randX();
+      c.el.style.left = c.x + "px";
+      c.el.style.top = c.y + "px";
+
+      const pick1 = c.el.style.background.includes("cloud4");
+      const base = pick1 ? CLOUD1 : CLOUD2;
+      const W = pick1 ? CLOUD1_W : CLOUD2_W;
+      const H = pick1 ? CLOUD1_H : CLOUD2_H;
+
+      c.circles = base.map(p => ({
+        x: c.x + p.x * W,
+        y: c.y + p.y * H,
+        r: p.r * W
+      }));
     }
 
     else if (c.y > BOTTOM_LIMIT + REUSE_DISTANCE) {
       c.y = TOP_LIMIT + Math.random() * 1200;
       c.x = randX();
+      c.el.style.left = c.x + "px";
+      c.el.style.top = c.y + "px";
+
+      const pick1 = c.el.style.background.includes("cloud4");
+      const base = pick1 ? CLOUD1 : CLOUD2;
+      const W = pick1 ? CLOUD1_W : CLOUD2_W;
+      const H = pick1 ? CLOUD1_H : CLOUD2_H;
+
+      c.circles = base.map(p => ({
+        x: c.x + p.x * W,
+        y: c.y + p.y * H,
+        r: p.r * W
+      }));
     }
-
-    c.el.style.left = c.x + "px";
-    c.el.style.top = c.y + "px";
-
-    const pick1 = c.el.style.background.includes("cloud4");
-    const base = pick1 ? CLOUD1 : CLOUD2;
-    const W = pick1 ? CLOUD1_W : CLOUD2_W;
-    const H = pick1 ? CLOUD1_H : CLOUD2_H;
-
-    c.circles = base.map(p => ({
-      x: c.x + p.x * W,
-      y: c.y + p.y * H,
-      r: p.r * W
-    }));
   }
 }
 
@@ -1279,22 +1337,30 @@ function recycleDarkClouds() {
     if (c.y < TOP_LIMIT - REUSE_DISTANCE) {
       c.y = BOTTOM_LIMIT - Math.random() * 1200;
       c.x = randX();
+      c.el.style.left = c.x + "px";
+      c.el.style.top = c.y + "px";
+
+      c.rects = DARK_RECTS.map(r => ({
+        x: c.x + r.x * DARK_W,
+        y: c.y + r.y * DARK_H,
+        w: r.w * DARK_W,
+        h: r.h * DARK_H
+      }));
     }
 
     else if (c.y > BOTTOM_LIMIT + REUSE_DISTANCE) {
       c.y = TOP_LIMIT + Math.random() * 1200;
       c.x = randX();
+      c.el.style.left = c.x + "px";
+      c.el.style.top = c.y + "px";
+
+      c.rects = DARK_RECTS.map(r => ({
+        x: c.x + r.x * DARK_W,
+        y: c.y + r.y * DARK_H,
+        w: r.w * DARK_W,
+        h: r.h * DARK_H
+      }));
     }
-
-    c.el.style.left = c.x + "px";
-    c.el.style.top = c.y + "px";
-
-    c.rects = DARK_RECTS.map(r => ({
-      x: c.x + r.x * DARK_W,
-      y: c.y + r.y * DARK_H,
-      w: r.w * DARK_W,
-      h: r.h * DARK_H
-    }));
   }
 }
 
@@ -1311,6 +1377,8 @@ function recycleBlackHoles() {
       bh.x = randX();
       bh.rotation = 0;
       bh.el.style.transform = '';
+      bh.el.style.left = bh.x + "px";
+      bh.el.style.top = bh.y + "px";
     }
 
     else if (bh.y > BOTTOM_LIMIT + REUSE_DISTANCE) {
@@ -1318,10 +1386,9 @@ function recycleBlackHoles() {
       bh.x = randX();
       bh.rotation = 0;
       bh.el.style.transform = '';
+      bh.el.style.left = bh.x + "px";
+      bh.el.style.top = bh.y + "px";
     }
-
-    bh.el.style.left = bh.x + "px";
-    bh.el.style.top = bh.y + "px";
   }
 }
 
@@ -1338,6 +1405,8 @@ function recyclePushables() {
       p.x = randX();
       p.velX = 0;
       p.velY = 0;
+      p.el.style.left = p.x + "px";
+      p.el.style.top = p.y + "px";
     }
 
     else if (p.y > BOTTOM_LIMIT + REUSE_DISTANCE) {
@@ -1345,10 +1414,9 @@ function recyclePushables() {
       p.x = randX();
       p.velX = 0;
       p.velY = 0;
+      p.el.style.left = p.x + "px";
+      p.el.style.top = p.y + "px";
     }
-
-    p.el.style.left = p.x + "px";
-    p.el.style.top = p.y + "px";
   }
 }
 
@@ -1966,6 +2034,32 @@ function enterBlackHoleLogic() {
 
   world.appendChild(bhMovingBgEl);
 
+  // Spawn floating dollar signs
+  for (let i = 0; i < 20; i++) {
+    const el = document.createElement("div");
+    el.textContent = "$";
+    el.style.position = "absolute";
+    el.style.color = "#00ff00";
+    el.style.fontSize = (20 + Math.random() * 30) + "px";
+    el.style.fontWeight = "bold";
+    el.style.opacity = Math.random() * 0.5 + 0.5;
+    el.style.zIndex = "12";
+
+    const x = (SCREEN_W - VOID_BG_WIDTH) / 2 + Math.random() * VOID_BG_WIDTH;
+    const y = VOID_START_Y - Math.random() * 1000; // Start around the player
+
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    world.appendChild(el);
+
+    voidSprites.push({
+      el,
+      x,
+      y,
+      speed: -(Math.random() * 2 + 1) // Float up
+    });
+  }
+
   // Swap sprite to jetpack in void zone
   originalSpriteBg = sprite.style.backgroundImage;
   sprite.style.backgroundImage = "url('items/jetpack.png')";
@@ -2015,6 +2109,7 @@ function exitBlackHole() {
 
 function update() {
   if (!introFinished) return;
+  frameCounter++;
 
   if (bhAnimating) {
     const now = performance.now();
@@ -2136,10 +2231,13 @@ function update() {
     return;
   }
 
-  recycleClouds();
-  recycleDarkClouds();
-  recycleBlackHoles();
-  recyclePushables();
+  // Throttled Recycling (every 30 frames ~ 0.5s)
+  if (frameCounter % 30 === 0) {
+    recycleClouds();
+    recycleDarkClouds();
+    recycleBlackHoles();
+    recyclePushables();
+  }
 
   // Update black hole rotations if player is within 2000x2000 pixel range
   for (let bh of blackHoles) {
@@ -2174,6 +2272,7 @@ function update() {
       planeSound.volume = volume;
     }
   } else {
+    // Stop sound if far away OR MUTED
     if (planeSoundPlaying && planeSound) {
       planeSound.pause();
       planeSound = null;
@@ -2189,28 +2288,37 @@ function update() {
   camX += velX;
   camY += velY;
 
-  // Check for early zero payout explosion after falling ~150 pixels
-  // Instant zero payout - trigger explosion immediately after just 10px fall
-  if (isZeroPayoutExplosion && fallStarted && !betResolved) {
+  // Zero payout - trigger explosion after 50px fall, but not in bonus mode
+  if (isZeroPayoutExplosion && !bonusMode && fallStarted && !betResolved) {
     const fallDistance = camY - zeroPayoutStartY;
-    if (fallDistance >= 10) {
+    if (fallDistance >= 50) {
       betResolved = true;
       earnings = 0;
+      fallStarted = false; // Stop all physics
+      betPlaced = false;
+      velX = 0;
+      velY = 0;
+      angVel = 0;
       triggerExplosion();
       isZeroPayoutExplosion = false;
-      // Skip rest of update since explosion is triggered
-      render();
-      requestAnimationFrame(update);
+      // Explosion handles its own animation, stop game update
       return;
     }
   }
 
   // Update pushable positions
+  const PUSHABLE_PHYSICS_DIST = 1500;
   for (const p of pushables) {
-    p.x += p.velX;
-    p.y += p.velY;
-    p.velX *= 0.95; // Apply friction
-    p.velY *= 0.95;
+    // Optimization: Skip physics for sleeping pushables far away
+    const dy = Math.abs(p.y - (camY + PLAYER_Y));
+    const isMoving = Math.abs(p.velX) > 0.1 || Math.abs(p.velY) > 0.1;
+
+    if (dy < PUSHABLE_PHYSICS_DIST || isMoving) {
+      p.x += p.velX;
+      p.y += p.velY;
+      p.velX *= 0.95; // Apply friction
+      p.velY *= 0.95;
+    }
   }
 
   velX *= onGround ? GROUND_FRICTION : AIR_FRICTION;
@@ -2276,12 +2384,11 @@ function update() {
   if (onGround && fallStarted && !betResolved) {
     if (landedTime === 0) {
       landedTime = performance.now();
-    } else if (performance.now() - landedTime > 1000) {
+    } else if (performance.now() - landedTime > 200) {
       betResolved = true;
 
-      // STRICT RTP ENFORCEMENT: Payout is EXACTLY the predetermined targetPayout
-      // Gameplay earnings are purely visual - final payout is fixed at bet time
-      let payout = targetPayout;
+      // Payout is based on accumulated earnings during gameplay
+      let payout = earnings;
 
       // Zero payout for losses
       if (isZeroPayoutExplosion || outcomeType === "lose") {
@@ -2329,11 +2436,14 @@ function render() {
     multiplierEl.classList.remove("showcase");
     scoreEl.classList.remove("showcase");
   } else {
-    scoreEl.style.display = "block";
-    // Force $0 display for zero payout rounds
-    let displayScore = (inBlackHole && bhShowcaseStart > 0) ? showcaseScore : earnings;
-    if (isZeroPayoutExplosion) displayScore = 0;
-    scoreEl.textContent = `$${displayScore.toFixed(2)}`;
+    // Hide score during zero payout explosion
+    if (isZeroPayoutExplosion) {
+      scoreEl.style.display = "none";
+    } else {
+      scoreEl.style.display = "block";
+      let displayScore = (inBlackHole && bhShowcaseStart > 0) ? showcaseScore : earnings;
+      scoreEl.textContent = `$${displayScore.toFixed(2)}`;
+    }
     if (inBlackHole && bhShowcaseStart > 0) {
       multiplierEl.classList.add("showcase");
       scoreEl.classList.add("showcase");
@@ -2356,9 +2466,17 @@ function render() {
   skeleton.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
 
   // Update pushable sprite positions
+  // Optimize Pushable Rendering: Only update DOM if visible
+  const PUSHABLE_RENDER_BUFFER = 1000;
   pushables.forEach(p => {
-    p.el.style.left = p.x + "px";
-    p.el.style.top = p.y + "px";
+    if (Math.abs(p.y - (camY + PLAYER_Y)) < PUSHABLE_RENDER_BUFFER) {
+      // Use left/top for positioning to avoid conflict with potential CSS transforms or double positioning
+      p.el.style.left = p.x + "px";
+      p.el.style.top = p.y + "px";
+      if (p.el.style.display === 'none') p.el.style.display = 'block';
+    } else {
+      if (p.el.style.display !== 'none') p.el.style.display = 'none';
+    }
   });
 
 
@@ -2454,8 +2572,8 @@ function animateExplosion() {
   if (!explosionActive) return;
   let allOffscreen = true;
   for (const part of explosionParts) {
-    // Apply gravity
-    part.velY += 0.8;
+    // Apply gravity - Increased to speed up "YOU LOST" duration
+    part.velY += 1.6;
     // Apply velocity
     part.x += part.velX;
     part.y += part.velY;
@@ -2493,7 +2611,11 @@ function cleanupExplosion() {
   // sprite.style.display will be restored in resetGameWorld()
 
   // Immediately complete round and reset game
-  hardResetWorld(true, 2000);
+  // Use a delay (1000ms) for zero payout to keep pacing fast
+  hardResetWorld(true, 1000);
+
+  // Restart the main game loop since it was stopped
+  requestAnimationFrame(update);
 }
 
 // Initial update() call removed; intro logic handles starting the game loop
