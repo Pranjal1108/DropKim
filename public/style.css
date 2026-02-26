@@ -1569,3 +1569,106 @@ body {
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.4);
 }
+
+/* =============================
+   RGS CONNECTION ERROR OVERLAY
+   ============================= */
+#rgsErrorOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(3, 7, 18, 0.97);
+  justify-content: center;
+  align-items: center;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#rgsErrorOverlay.visible {
+  display: flex;
+}
+
+.rgs-error-card {
+  background: linear-gradient(145deg, #1a1a2e, #16213e);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  border-radius: 20px;
+  padding: 50px 60px;
+  text-align: center;
+  max-width: 480px;
+  width: 90%;
+  box-shadow:
+    0 0 60px rgba(255, 50, 50, 0.15),
+    0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.rgs-error-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: rgsIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes rgsIconPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.rgs-error-title {
+  color: #ff6b6b;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  letter-spacing: 0.5px;
+}
+
+.rgs-error-desc {
+  color: #aab;
+  font-size: 16px;
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.rgs-error-url {
+  color: #667;
+  font-size: 13px;
+  margin: 0 0 28px 0;
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.rgs-error-retry {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 14px 48px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(238, 90, 36, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.rgs-error-retry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(238, 90, 36, 0.6);
+}
+
+.rgs-error-retry:active {
+  transform: translateY(0);
+}
+
+.rgs-error-retry:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}

@@ -7,6 +7,10 @@ app = Flask(__name__, static_folder='public', static_url_path='')
 def index():
     return send_from_directory('public', 'index.html')
 
+@app.route('/health')
+def health():
+    return jsonify({'status': 'ok'})
+
 @app.route('/bet', methods=['POST'])
 def bet():
     data = request.get_json()

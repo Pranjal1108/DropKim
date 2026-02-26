@@ -1,3 +1,94 @@
+// === RGS CONNECTION SYSTEM ===
+const rgsErrorOverlay = document.getElementById('rgsErrorOverlay');
+const rgsErrorUrlEl = document.getElementById('rgsErrorUrl');
+const rgsRetryBtn = document.getElementById('rgsRetryBtn');
+
+let rgsUrl = null; // null means use local math (backward compatible)
+let rgsConnected = false;
+
+function getRgsUrlFromParams() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('rgs') || null;
+}
+
+function showRgsError(url) {
+  rgsErrorUrlEl.textContent = url ? `Server: ${url}` : 'No RGS URL configured';
+  rgsErrorOverlay.classList.add('visible');
+}
+
+function hideRgsError() {
+  rgsErrorOverlay.classList.remove('visible');
+}
+
+async function checkRgsHealth(url) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const resp = await fetch(`${url}/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    return data.status === 'ok';
+  } catch (e) {
+    console.warn('RGS health check failed:', e.message);
+    return false;
+  }
+}
+
+async function initRgsConnection() {
+  rgsUrl = getRgsUrlFromParams();
+  if (!rgsUrl) {
+    // No RGS URL — use local math, game works standalone
+    console.log('No ?rgs= param — using local math for outcomes.');
+    rgsConnected = false;
+    hideRgsError();
+    return true;
+  }
+
+  console.log(`Checking RGS at: ${rgsUrl}`);
+  const ok = await checkRgsHealth(rgsUrl);
+  if (ok) {
+    console.log('RGS connected successfully.');
+    rgsConnected = true;
+    hideRgsError();
+    return true;
+  } else {
+    console.error('RGS connection failed.');
+    rgsConnected = false;
+    showRgsError(rgsUrl);
+    return false;
+  }
+}
+
+rgsRetryBtn.addEventListener('click', async () => {
+  rgsRetryBtn.disabled = true;
+  rgsRetryBtn.textContent = 'Connecting...';
+  const ok = await initRgsConnection();
+  rgsRetryBtn.disabled = false;
+  rgsRetryBtn.textContent = 'Retry';
+});
+
+// Detect URL changes (back/forward, hash changes)
+window.addEventListener('popstate', () => {
+  const newUrl = getRgsUrlFromParams();
+  if (newUrl !== rgsUrl) {
+    initRgsConnection();
+  }
+});
+
+// Re-validate when tab regains focus (user may have edited URL bar)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const newUrl = getRgsUrlFromParams();
+    if (newUrl !== rgsUrl) {
+      initRgsConnection();
+    }
+  }
+});
+
+// Run initial RGS check
+initRgsConnection();
+
 // === AUDIO SYSTEM ===
 const backgroundMusic = new Audio('items/background_music.mp3');
 backgroundMusic.loop = true;
@@ -445,7 +536,7 @@ autoBetBtn.onclick = () => {
   }
 };
 
-function placeBetAction() {
+async function placeBetAction() {
   if (fallStarted || betPlaced) return;
   const effectiveBet = bonusMode ? betAmount * 10 : betAmount;
   if (effectiveBet > balance) {
@@ -456,6 +547,13 @@ function placeBetAction() {
     }
     return;
   }
+
+  // If RGS URL is configured, validate connection before proceeding
+  if (rgsUrl && !rgsConnected) {
+    showRgsError(rgsUrl);
+    return;
+  }
+
   balance -= effectiveBet;
   updateBalanceUI();
   camX = camY = velX = velY = angle = angVel = 0;
@@ -465,8 +563,21 @@ function placeBetAction() {
   fallStarted = true;
   betPlaced = true;
   betResolved = false;
-  // Determine outcome and target payout based on RTP math
-  decideOutcome(effectiveBet);
+  lockBetUI();
+
+  // Determine outcome: use RGS server if configured, otherwise local math
+  const outcomeOk = await decideOutcome(effectiveBet);
+  if (!outcomeOk) {
+    // RGS call failed mid-session — refund and show error
+    balance += effectiveBet;
+    fallStarted = false;
+    betPlaced = false;
+    unlockBetUI();
+    updateBalanceUI();
+    rgsConnected = false;
+    showRgsError(rgsUrl);
+    return;
+  }
 
   // === PHYSICS TUNING ===
   // Normalize speed to feel like Base Mode
@@ -483,7 +594,6 @@ function placeBetAction() {
     GRAVITY = 0.55;
     MAX_FALL = 22;
   }
-  lockBetUI();
   // Hide bonus modal when bet is placed
   setBonusModalOpen(false);
 }
@@ -498,7 +608,59 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-function decideOutcome(bet) {
+async function decideOutcome(bet) {
+  const actualBet = bet || betAmount;
+
+  // Strict RGS Mode: If an RGS URL is configured, we must resolve via server.
+  if (rgsUrl) {
+    if (!rgsConnected) {
+      console.error('RGS configured but not connected. Aborting outcome resolution.');
+      return false;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const resp = await fetch(`${rgsUrl}/bet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          betAmount: actualBet,
+          mode: chaosMode ? 'chaos' : noZeroMode ? 'noZero' : 'base'
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) throw new Error(`Server error: HTTP ${resp.status}`);
+
+      const data = await resp.json();
+      targetPayout = data.targetPayout || 0;
+
+      // Determine outcomeType from payout
+      if (targetPayout <= 0) {
+        outcomeType = 'lose';
+      } else if (targetPayout >= actualBet * 50) {
+        outcomeType = 'insane';
+      } else if (targetPayout >= actualBet * 10) {
+        outcomeType = 'big';
+      } else if (targetPayout >= actualBet * 4) {
+        outcomeType = 'medium';
+      } else {
+        outcomeType = 'small';
+      }
+
+      isZeroPayoutExplosion = (outcomeType === 'lose');
+      console.log(`RGS Outcome: ${outcomeType}, targetPayout: ${targetPayout.toFixed(2)}, isZeroPayoutExplosion: ${isZeroPayoutExplosion}`);
+      return true;
+    } catch (e) {
+      console.error('RGS bet request failed:', e.message);
+      // Strictly NO fallback to local math if the RGS request fails
+      return false;
+    }
+  }
+
+  // Local math resolution (ONLY if no RGS URL provided at all)
   let math = BaseMath;
   if (chaosMode) math = BonusMath;
   else if (noZeroMode) math = NoZeroMath;
@@ -506,20 +668,14 @@ function decideOutcome(bet) {
   let r = Math.random();
   let cumulative = 0;
 
-  // Use the actual bet amount for payout calculation
-  const actualBet = bet || betAmount;
-
   for (const tier of math.tiers) {
     cumulative += tier.probability;
     if (r < cumulative) {
       outcomeType = tier.name;
-
-      // Calculate target payout based on actual bet and tier multiplier
       targetPayout = actualBet * tier.multiplier;
-
       isZeroPayoutExplosion = (outcomeType === "lose");
-      console.log(`Outcome decided: ${outcomeType}, targetPayout: ${targetPayout.toFixed(2)}, isZeroPayoutExplosion: ${isZeroPayoutExplosion}`);
-      return;
+      console.log(`Local Outcome: ${outcomeType}, targetPayout: ${targetPayout.toFixed(2)}, isZeroPayoutExplosion: ${isZeroPayoutExplosion}`);
+      return true;
     }
   }
 
@@ -528,6 +684,7 @@ function decideOutcome(bet) {
   targetPayout = 0;
   isZeroPayoutExplosion = true;
   console.log(`Outcome fallback: lose, targetPayout: 0, isZeroPayoutExplosion: true`);
+  return true;
 }
 
 

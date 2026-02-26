@@ -8,6 +8,11 @@ app.use(express.static("public"));
 // Handle favicon requests to prevent 404 errors
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+// Health check endpoint for RGS connectivity validation
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.post("/bet", (req, res) => {
   const betAmount = Number(req.body.betAmount);
 
